@@ -320,13 +320,6 @@ node test-build.js
 node publish.js
 ```
 
-### 发布到 npm
-
-```bash
-cd dist
-npm publish
-```
-
 ## 开发
 
 ### 本地开发
