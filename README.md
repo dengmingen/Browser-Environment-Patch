@@ -305,20 +305,7 @@ node example.js
 └── README.md        # 说明文档
 ```
 
-## 发布
 
-### 构建
-
-```bash
-# 构建包
-node build-simple.js
-
-# 测试构建的包
-node test-build.js
-
-# 准备发布
-node publish.js
-```
 
 ## 开发
 
