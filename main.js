@@ -1087,21 +1087,51 @@ const smartConfig = config.getSmartConfig();
 
             // 方法
             assign: function(url) {
+                performanceMonitor.recordApiCall('location.assign');
                 console.log('[Location] assign called with:', url);
-                this.href = url;
+                this._updateFromHref(url);
             },
 
             replace: function(url) {
+                performanceMonitor.recordApiCall('location.replace');
                 console.log('[Location] replace called with:', url);
-                this.href = url;
+                this._updateFromHref(url);
             },
 
             reload: function(forcedReload) {
+                performanceMonitor.recordApiCall('location.reload');
                 console.log('[Location] reload called with forcedReload:', forcedReload);
             },
 
             toString: function() {
                 return this._href;
+            },
+            
+            valueOf: function() {
+                return this._href;
+            },
+            
+            // 内部方法：从完整URL更新所有属性
+            _updateFromHref: function(url) {
+                try {
+                    const urlObj = new URL(url);
+                    this._href = urlObj.href;
+                    this._protocol = urlObj.protocol;
+                    this._host = urlObj.host;
+                    this._hostname = urlObj.hostname;
+                    this._port = urlObj.port;
+                    this._pathname = urlObj.pathname;
+                    this._search = urlObj.search;
+                    this._hash = urlObj.hash;
+                    this._origin = urlObj.origin;
+                    this._username = urlObj.username;
+                    this._password = urlObj.password;
+                    
+                    // 重置searchParams以便重新解析
+                    this._searchParams = null;
+                } catch (e) {
+                    console.error('[Location] Invalid URL:', url, e.message);
+                }
             }
         };
 
@@ -1147,15 +1177,60 @@ const smartConfig = config.getSmartConfig();
         
         function createElement(tagName) {
             const element = {
+                // DOM Node 基础属性
                 tagName: tagName.toUpperCase(),
-                nodeType: 1,
+                nodeType: 1, // ELEMENT_NODE
                 nodeName: tagName.toUpperCase(),
                 nodeValue: null,
+                ownerDocument: null, // 将在创建后设置
+                parentNode: null,
+                childNodes: [],
+                children: [],
+                nextSibling: null,
+                previousSibling: null,
+                firstChild: null,
+                lastChild: null,
+                firstElementChild: null,
+                lastElementChild: null,
+                
+                // Element 属性
                 textContent: '',
                 innerHTML: '',
+                outerHTML: '',
                 innerText: '',
                 id: '',
                 className: '',
+                name: '',
+                title: '',
+                lang: '',
+                dir: '',
+                hidden: false,
+                tabIndex: -1,
+                accessKey: '',
+                contentEditable: 'inherit',
+                isContentEditable: false,
+                spellcheck: true,
+                translate: true,
+                
+                // 命名空间
+                namespaceURI: 'http://www.w3.org/1999/xhtml',
+                prefix: null,
+                localName: tagName.toLowerCase(),
+                
+                // 尺寸和位置
+                clientTop: 0,
+                clientLeft: 0,
+                clientWidth: 0,
+                clientHeight: 0,
+                scrollTop: 0,
+                scrollLeft: 0,
+                scrollWidth: 0,
+                scrollHeight: 0,
+                offsetTop: 0,
+                offsetLeft: 0,
+                offsetWidth: 0,
+                offsetHeight: 0,
+                offsetParent: null,
                 classList: {
                     add: function(...tokens) {
                         console.log('[Element] classList.add:', tokens);
@@ -1194,19 +1269,288 @@ const smartConfig = config.getSmartConfig();
                     },
                     length: 0
                 },
-                attributes: [],
-                children: [],
-                childNodes: [],
-                parentNode: null,
-                parentElement: null,
-                firstChild: null,
-                lastChild: null,
-                firstElementChild: null,
-                lastElementChild: null,
-                nextSibling: null,
-                previousSibling: null,
-                nextElementSibling: null,
-                previousElementSibling: null,
+                // 属性集合
+                attributes: {
+                    length: 0,
+                    getNamedItem: function(name) {
+                        return this[name] || null;
+                    },
+                    setNamedItem: function(attr) {
+                        this[attr.name] = attr;
+                        this.length = Object.keys(this).filter(k => k !== 'length' && typeof this[k] !== 'function').length;
+                        return attr;
+                    },
+                    removeNamedItem: function(name) {
+                        const attr = this[name];
+                        delete this[name];
+                        this.length = Object.keys(this).filter(k => k !== 'length' && typeof this[k] !== 'function').length;
+                        return attr;
+                    },
+                    item: function(index) {
+                        const keys = Object.keys(this).filter(k => k !== 'length' && typeof this[k] !== 'function');
+                        return this[keys[index]] || null;
+                    }
+                },
+                
+                // DOM 操作方法
+                appendChild: function(child) {
+                    performanceMonitor.recordApiCall('element.appendChild');
+                    this.childNodes.push(child);
+                    if (child.nodeType === 1) { // ELEMENT_NODE
+                        this.children.push(child);
+                        this.lastElementChild = child;
+                        if (!this.firstElementChild) {
+                            this.firstElementChild = child;
+                        }
+                    }
+                    child.parentNode = this;
+                    child.parentElement = this.nodeType === 1 ? this : null;
+                    this.lastChild = child;
+                    if (!this.firstChild) {
+                        this.firstChild = child;
+                    }
+                    // 更新兄弟节点关系
+                    if (this.childNodes.length > 1) {
+                        const prevChild = this.childNodes[this.childNodes.length - 2];
+                        prevChild.nextSibling = child;
+                        child.previousSibling = prevChild;
+                    }
+                    return child;
+                },
+                
+                removeChild: function(child) {
+                    performanceMonitor.recordApiCall('element.removeChild');
+                    const index = this.childNodes.indexOf(child);
+                    if (index !== -1) {
+                        this.childNodes.splice(index, 1);
+                        if (child.nodeType === 1) {
+                            const elemIndex = this.children.indexOf(child);
+                            if (elemIndex !== -1) {
+                                this.children.splice(elemIndex, 1);
+                            }
+                            // 更新 first/last ElementChild
+                            this.firstElementChild = this.children[0] || null;
+                            this.lastElementChild = this.children[this.children.length - 1] || null;
+                        }
+                        child.parentNode = null;
+                        child.parentElement = null;
+                        // 更新兄弟节点关系
+                        if (child.previousSibling) {
+                            child.previousSibling.nextSibling = child.nextSibling;
+                        }
+                        if (child.nextSibling) {
+                            child.nextSibling.previousSibling = child.previousSibling;
+                        }
+                        child.nextSibling = null;
+                        child.previousSibling = null;
+                        // 更新 first/last Child
+                        this.firstChild = this.childNodes[0] || null;
+                        this.lastChild = this.childNodes[this.childNodes.length - 1] || null;
+                    }
+                    return child;
+                },
+                
+                insertBefore: function(newChild, referenceChild) {
+                    performanceMonitor.recordApiCall('element.insertBefore');
+                    if (!referenceChild) {
+                        return this.appendChild(newChild);
+                    }
+                    const index = this.childNodes.indexOf(referenceChild);
+                    if (index !== -1) {
+                        this.childNodes.splice(index, 0, newChild);
+                        if (newChild.nodeType === 1) {
+                            const elemIndex = this.children.indexOf(referenceChild);
+                            if (elemIndex !== -1) {
+                                this.children.splice(elemIndex, 0, newChild);
+                            }
+                        }
+                        newChild.parentNode = this;
+                        newChild.parentElement = this.nodeType === 1 ? this : null;
+                        // 更新兄弟节点关系
+                        newChild.nextSibling = referenceChild;
+                        newChild.previousSibling = referenceChild.previousSibling;
+                        if (referenceChild.previousSibling) {
+                            referenceChild.previousSibling.nextSibling = newChild;
+                        }
+                        referenceChild.previousSibling = newChild;
+                    }
+                    return newChild;
+                },
+                
+                replaceChild: function(newChild, oldChild) {
+                    performanceMonitor.recordApiCall('element.replaceChild');
+                    this.insertBefore(newChild, oldChild);
+                    return this.removeChild(oldChild);
+                },
+                
+                cloneNode: function(deep) {
+                    performanceMonitor.recordApiCall('element.cloneNode');
+                    const clone = document.createElement(this.tagName);
+                    // 复制属性
+                    clone.id = this.id;
+                    clone.className = this.className;
+                    clone.textContent = deep ? this.textContent : '';
+                    // 简化实现，不复制所有属性和子节点
+                    return clone;
+                },
+                
+                // 属性操作
+                getAttribute: function(name) {
+                    performanceMonitor.recordApiCall('element.getAttribute');
+                    return this.attributes.getNamedItem(name)?.value || null;
+                },
+                
+                setAttribute: function(name, value) {
+                    performanceMonitor.recordApiCall('element.setAttribute');
+                    const attr = document.createAttribute(name);
+                    attr.value = String(value);
+                    this.attributes.setNamedItem(attr);
+                    
+                    // 处理特殊属性
+                    if (name === 'id') {
+                        this.id = value;
+                    } else if (name === 'class') {
+                        this.className = value;
+                    }
+                },
+                
+                removeAttribute: function(name) {
+                    performanceMonitor.recordApiCall('element.removeAttribute');
+                    this.attributes.removeNamedItem(name);
+                    if (name === 'id') {
+                        this.id = '';
+                    } else if (name === 'class') {
+                        this.className = '';
+                    }
+                },
+                
+                hasAttribute: function(name) {
+                    performanceMonitor.recordApiCall('element.hasAttribute');
+                    return this.attributes.getNamedItem(name) !== null;
+                },
+                
+                getAttributeNames: function() {
+                    performanceMonitor.recordApiCall('element.getAttributeNames');
+                    return Object.keys(this.attributes).filter(k => k !== 'length' && typeof this.attributes[k] !== 'function');
+                },
+                
+                // 查询方法
+                querySelector: function(selectors) {
+                    performanceMonitor.recordApiCall('element.querySelector');
+                    console.log('[Element] querySelector:', selectors);
+                    return null;
+                },
+                
+                querySelectorAll: function(selectors) {
+                    performanceMonitor.recordApiCall('element.querySelectorAll');
+                    console.log('[Element] querySelectorAll:', selectors);
+                    return createNodeList([]);
+                },
+                
+                getElementsByTagName: function(tagName) {
+                    performanceMonitor.recordApiCall('element.getElementsByTagName');
+                    console.log('[Element] getElementsByTagName:', tagName);
+                    return createHTMLCollection([]);
+                },
+                
+                getElementsByClassName: function(classNames) {
+                    performanceMonitor.recordApiCall('element.getElementsByClassName');
+                    console.log('[Element] getElementsByClassName:', classNames);
+                    return createHTMLCollection([]);
+                },
+                
+                // 匹配方法
+                matches: function(selectors) {
+                    performanceMonitor.recordApiCall('element.matches');
+                    console.log('[Element] matches:', selectors);
+                    return false;
+                },
+                
+                closest: function(selectors) {
+                    performanceMonitor.recordApiCall('element.closest');
+                    console.log('[Element] closest:', selectors);
+                    return null;
+                },
+                
+                // 焦点方法
+                focus: function(options) {
+                    performanceMonitor.recordApiCall('element.focus');
+                    console.log('[Element] focus:', options);
+                    document.activeElement = this;
+                },
+                
+                blur: function() {
+                    performanceMonitor.recordApiCall('element.blur');
+                    console.log('[Element] blur');
+                    if (document.activeElement === this) {
+                        document.activeElement = null;
+                    }
+                },
+                
+                // 滚动方法
+                scrollIntoView: function(options) {
+                    performanceMonitor.recordApiCall('element.scrollIntoView');
+                    console.log('[Element] scrollIntoView:', options);
+                },
+                
+                scrollTo: function(x, y) {
+                    performanceMonitor.recordApiCall('element.scrollTo');
+                    if (typeof x === 'object') {
+                        this.scrollLeft = x.left || 0;
+                        this.scrollTop = x.top || 0;
+                    } else {
+                        this.scrollLeft = x || 0;
+                        this.scrollTop = y || 0;
+                    }
+                },
+                
+                scrollBy: function(x, y) {
+                    performanceMonitor.recordApiCall('element.scrollBy');
+                    if (typeof x === 'object') {
+                        this.scrollLeft += x.left || 0;
+                        this.scrollTop += x.top || 0;
+                    } else {
+                        this.scrollLeft += x || 0;
+                        this.scrollTop += y || 0;
+                    }
+                },
+                
+                // 边界框方法
+                getBoundingClientRect: function() {
+                    performanceMonitor.recordApiCall('element.getBoundingClientRect');
+                    return {
+                        top: this.offsetTop,
+                        left: this.offsetLeft,
+                        right: this.offsetLeft + this.offsetWidth,
+                        bottom: this.offsetTop + this.offsetHeight,
+                        width: this.offsetWidth,
+                        height: this.offsetHeight,
+                        x: this.offsetLeft,
+                        y: this.offsetTop
+                    };
+                },
+                
+                getClientRects: function() {
+                    performanceMonitor.recordApiCall('element.getClientRects');
+                    return [this.getBoundingClientRect()];
+                },
+                
+                // 事件方法
+                addEventListener: function(type, listener, options) {
+                    performanceMonitor.recordApiCall('element.addEventListener');
+                    console.log('[Element] addEventListener:', type, typeof listener, options);
+                },
+                
+                removeEventListener: function(type, listener, options) {
+                    performanceMonitor.recordApiCall('element.removeEventListener');
+                    console.log('[Element] removeEventListener:', type, typeof listener, options);
+                },
+                
+                dispatchEvent: function(event) {
+                    performanceMonitor.recordApiCall('element.dispatchEvent');
+                    console.log('[Element] dispatchEvent:', event.type);
+                    return true;
+                },
                 // 支持 canvas.getContext
                 getContext: function(type) {
                     // 简单 mock 2d context
@@ -1250,9 +1594,15 @@ const smartConfig = config.getSmartConfig();
         }
         
         const document = {
-            nodeType: 9,
+            // DOM Node 属性
+            nodeType: 9, // DOCUMENT_NODE
             nodeName: '#document',
             nodeValue: null,
+            ownerDocument: null,
+            parentNode: null,
+            childNodes: [],
+            
+            // Document 基本属性
             documentElement: createElement('html'),
             head: createElement('head'),
             body: createElement('body'),
@@ -1261,15 +1611,48 @@ const smartConfig = config.getSmartConfig();
             URL: smartConfig.location.href,
             documentURI: smartConfig.location.href,
             baseURI: smartConfig.location.href,
+            
+            // 字符编码
             characterSet: smartConfig.document.characterSet,
             charset: smartConfig.document.characterSet,
             inputEncoding: smartConfig.document.characterSet,
+            encoding: smartConfig.document.characterSet,
+            
+            // 文档属性
             contentType: 'text/html',
+            doctype: {
+                name: 'html',
+                publicId: '',
+                systemId: '',
+                nodeType: 10 // DOCUMENT_TYPE_NODE
+            },
+            compatMode: 'CSS1Compat', // 标准模式
             readyState: 'complete',
             lastModified: new Date().toUTCString(),
+            
+            // 可见性API
+            visibilityState: 'visible',
+            hidden: false,
+            
+            // Cookie和引用
             cookie: '',
             referrer: '',
             location: globalObj.location,
+            defaultView: null, // 将在后面设置为window
+            
+            // 当前聚焦元素
+            activeElement: null,
+            
+            // 样式表
+            styleSheets: createHTMLCollection([]),
+            
+            // 设计模式
+            designMode: 'off',
+            
+            // 滚动元素
+            get scrollingElement() {
+                return this.documentElement;
+            },
             
             // 集合
             get images() { return createHTMLCollection([]); },
@@ -1282,68 +1665,298 @@ const smartConfig = config.getSmartConfig();
             get applets() { return createHTMLCollection([]); },
             get all() { return createHTMLCollection([]); },
             
-            // 方法
+            // DOM查询方法
             getElementById: function(id) {
+                performanceMonitor.recordApiCall('document.getElementById');
                 console.log('[Document] getElementById:', id);
                 return null;
             },
             getElementsByTagName: function(tagName) {
+                performanceMonitor.recordApiCall('document.getElementsByTagName');
                 console.log('[Document] getElementsByTagName:', tagName);
                 return createHTMLCollection([]);
             },
             getElementsByClassName: function(classNames) {
+                performanceMonitor.recordApiCall('document.getElementsByClassName');
                 console.log('[Document] getElementsByClassName:', classNames);
                 return createHTMLCollection([]);
             },
             getElementsByName: function(name) {
+                performanceMonitor.recordApiCall('document.getElementsByName');
                 console.log('[Document] getElementsByName:', name);
                 return createNodeList([]);
             },
             querySelector: function(selectors) {
+                performanceMonitor.recordApiCall('document.querySelector');
                 console.log('[Document] querySelector:', selectors);
                 return null;
             },
             querySelectorAll: function(selectors) {
+                performanceMonitor.recordApiCall('document.querySelectorAll');
                 console.log('[Document] querySelectorAll:', selectors);
                 return createNodeList([]);
             },
-            createElement: function(tagName) {
-                console.log('[Document] createElement:', tagName);
-                return createElement(tagName);
+            
+            // 范围查询
+            elementFromPoint: function(x, y) {
+                performanceMonitor.recordApiCall('document.elementFromPoint');
+                console.log('[Document] elementFromPoint:', x, y);
+                return null;
             },
+            elementsFromPoint: function(x, y) {
+                performanceMonitor.recordApiCall('document.elementsFromPoint');
+                console.log('[Document] elementsFromPoint:', x, y);
+                return createNodeList([]);
+            },
+            
+            // 获取元素盒模型信息
+            getBoxQuads: function(options) {
+                performanceMonitor.recordApiCall('document.getBoxQuads');
+                console.log('[Document] getBoxQuads:', options);
+                return [];
+            },
+            // DOM创建方法
+            createElement: function(tagName, options) {
+                performanceMonitor.recordApiCall('document.createElement');
+                console.log('[Document] createElement:', tagName, options);
+                const element = createElement(tagName);
+                
+                // 设置 ownerDocument
+                element.ownerDocument = this;
+                
+                // 处理自定义元素选项
+                if (options && options.is) {
+                    element.setAttribute('is', options.is);
+                }
+                
+                return element;
+            },
+            
+            createElementNS: function(namespaceURI, qualifiedName, options) {
+                performanceMonitor.recordApiCall('document.createElementNS');
+                console.log('[Document] createElementNS:', namespaceURI, qualifiedName, options);
+                const element = createElement(qualifiedName);
+                element.namespaceURI = namespaceURI;
+                return element;
+            },
+            
             createTextNode: function(data) {
+                performanceMonitor.recordApiCall('document.createTextNode');
                 console.log('[Document] createTextNode:', data);
                 return {
-                    nodeType: 3,
+                    nodeType: 3, // TEXT_NODE
                     nodeName: '#text',
-                    nodeValue: data,
-                    textContent: data
+                    nodeValue: String(data),
+                    textContent: String(data),
+                    data: String(data),
+                    length: String(data).length,
+                    ownerDocument: this,
+                    parentNode: null,
+                    nextSibling: null,
+                    previousSibling: null,
+                    
+                    // Text节点方法
+                    splitText: function(offset) {
+                        console.log('[TextNode] splitText:', offset);
+                        return document.createTextNode(this.data.substring(offset));
+                    },
+                    substringData: function(offset, count) {
+                        return this.data.substring(offset, offset + count);
+                    },
+                    appendData: function(data) {
+                        this.data += data;
+                        this.nodeValue = this.data;
+                        this.textContent = this.data;
+                        this.length = this.data.length;
+                    },
+                    insertData: function(offset, data) {
+                        this.data = this.data.substring(0, offset) + data + this.data.substring(offset);
+                        this.nodeValue = this.data;
+                        this.textContent = this.data;
+                        this.length = this.data.length;
+                    },
+                    deleteData: function(offset, count) {
+                        this.data = this.data.substring(0, offset) + this.data.substring(offset + count);
+                        this.nodeValue = this.data;
+                        this.textContent = this.data;
+                        this.length = this.data.length;
+                    },
+                    replaceData: function(offset, count, data) {
+                        this.deleteData(offset, count);
+                        this.insertData(offset, data);
+                    }
                 };
             },
+            
             createDocumentFragment: function() {
+                performanceMonitor.recordApiCall('document.createDocumentFragment');
                 console.log('[Document] createDocumentFragment');
                 return {
-                    nodeType: 11,
+                    nodeType: 11, // DOCUMENT_FRAGMENT_NODE
                     nodeName: '#document-fragment',
                     nodeValue: null,
                     childNodes: [],
-                    children: []
+                    children: [],
+                    ownerDocument: this,
+                    parentNode: null,
+                    
+                    // DocumentFragment方法
+                    getElementById: function(id) {
+                        return null; // 简化实现
+                    },
+                    querySelector: function(selectors) {
+                        console.log('[DocumentFragment] querySelector:', selectors);
+                        return null;
+                    },
+                    querySelectorAll: function(selectors) {
+                        console.log('[DocumentFragment] querySelectorAll:', selectors);
+                        return createNodeList([]);
+                    },
+                    
+                    // 子节点操作
+                    appendChild: function(child) {
+                        this.childNodes.push(child);
+                        if (child.nodeType === 1) { // ELEMENT_NODE
+                            this.children.push(child);
+                        }
+                        child.parentNode = this;
+                        return child;
+                    },
+                    removeChild: function(child) {
+                        const index = this.childNodes.indexOf(child);
+                        if (index !== -1) {
+                            this.childNodes.splice(index, 1);
+                            if (child.nodeType === 1) {
+                                const elemIndex = this.children.indexOf(child);
+                                if (elemIndex !== -1) {
+                                    this.children.splice(elemIndex, 1);
+                                }
+                            }
+                            child.parentNode = null;
+                        }
+                        return child;
+                    }
                 };
             },
+            
             createComment: function(data) {
+                performanceMonitor.recordApiCall('document.createComment');
                 console.log('[Document] createComment:', data);
                 return {
-                    nodeType: 8,
+                    nodeType: 8, // COMMENT_NODE
                     nodeName: '#comment',
-                    nodeValue: data
+                    nodeValue: String(data),
+                    data: String(data),
+                    length: String(data).length,
+                    ownerDocument: this,
+                    parentNode: null,
+                    nextSibling: null,
+                    previousSibling: null
                 };
             },
+            
             createAttribute: function(name) {
+                performanceMonitor.recordApiCall('document.createAttribute');
                 console.log('[Document] createAttribute:', name);
                 return {
-                    name: name,
+                    name: name.toLowerCase(),
                     value: '',
-                    specified: true
+                    specified: true,
+                    ownerElement: null,
+                    
+                    get localName() { return this.name; },
+                    get namespaceURI() { return null; },
+                    get prefix() { return null; }
+                };
+            },
+            
+            createAttributeNS: function(namespaceURI, qualifiedName) {
+                performanceMonitor.recordApiCall('document.createAttributeNS');
+                console.log('[Document] createAttributeNS:', namespaceURI, qualifiedName);
+                const attr = this.createAttribute(qualifiedName);
+                attr.namespaceURI = namespaceURI;
+                return attr;
+            },
+            
+            // Range API
+            createRange: function() {
+                performanceMonitor.recordApiCall('document.createRange');
+                console.log('[Document] createRange');
+                return {
+                    startContainer: this,
+                    startOffset: 0,
+                    endContainer: this,
+                    endOffset: 0,
+                    collapsed: true,
+                    commonAncestorContainer: this,
+                    
+                    setStart: function(node, offset) {
+                        this.startContainer = node;
+                        this.startOffset = offset;
+                    },
+                    setEnd: function(node, offset) {
+                        this.endContainer = node;
+                        this.endOffset = offset;
+                    },
+                    collapse: function(toStart) {
+                        if (toStart) {
+                            this.endContainer = this.startContainer;
+                            this.endOffset = this.startOffset;
+                        } else {
+                            this.startContainer = this.endContainer;
+                            this.startOffset = this.endOffset;
+                        }
+                        this.collapsed = true;
+                    },
+                    selectNode: function(node) {
+                        this.startContainer = node.parentNode;
+                        this.endContainer = node.parentNode;
+                        this.startOffset = 0; // 简化实现
+                        this.endOffset = 1;
+                    },
+                    deleteContents: function() {},
+                    extractContents: function() { return document.createDocumentFragment(); },
+                    cloneContents: function() { return document.createDocumentFragment(); },
+                    insertNode: function(node) {},
+                    surroundContents: function(newParent) {},
+                    cloneRange: function() { return document.createRange(); },
+                    toString: function() { return ''; }
+                };
+            },
+            
+            // TreeWalker API
+            createTreeWalker: function(root, whatToShow, filter) {
+                performanceMonitor.recordApiCall('document.createTreeWalker');
+                console.log('[Document] createTreeWalker:', root, whatToShow, filter);
+                return {
+                    root: root || this.documentElement,
+                    whatToShow: whatToShow || 0xFFFFFFFF,
+                    filter: filter || null,
+                    currentNode: root || this.documentElement,
+                    
+                    nextNode: function() { return null; },
+                    previousNode: function() { return null; },
+                    firstChild: function() { return null; },
+                    lastChild: function() { return null; },
+                    parentNode: function() { return null; },
+                    nextSibling: function() { return null; },
+                    previousSibling: function() { return null; }
+                };
+            },
+            
+            // NodeIterator API
+            createNodeIterator: function(root, whatToShow, filter) {
+                performanceMonitor.recordApiCall('document.createNodeIterator');
+                console.log('[Document] createNodeIterator:', root, whatToShow, filter);
+                return {
+                    root: root || this.documentElement,
+                    whatToShow: whatToShow || 0xFFFFFFFF,
+                    filter: filter || null,
+                    referenceNode: root || this.documentElement,
+                    pointerBeforeReferenceNode: true,
+                    
+                    nextNode: function() { return null; },
+                    previousNode: function() { return null; }
                 };
             },
             createEvent: function(type) {
@@ -1401,10 +2014,143 @@ const smartConfig = config.getSmartConfig();
                 return true;
             },
             execCommand: function(commandId, showUI, value) {
+                performanceMonitor.recordApiCall('document.execCommand');
                 console.log('[Document] execCommand:', commandId, showUI, value);
                 return true;
+            },
+            
+            // 导入节点
+            importNode: function(node, deep) {
+                performanceMonitor.recordApiCall('document.importNode');
+                console.log('[Document] importNode:', node, deep);
+                // 简化实现：创建一个新节点
+                if (node.nodeType === 1) { // ELEMENT_NODE
+                    return this.createElement(node.tagName);
+                } else if (node.nodeType === 3) { // TEXT_NODE
+                    return this.createTextNode(node.nodeValue);
+                }
+                return node;
+            },
+            
+            // 采用节点
+            adoptNode: function(node) {
+                performanceMonitor.recordApiCall('document.adoptNode');
+                console.log('[Document] adoptNode:', node);
+                if (node.ownerDocument !== this) {
+                    node.ownerDocument = this;
+                }
+                return node;
+            },
+            
+            // 标准化文档
+            normalizeDocument: function() {
+                performanceMonitor.recordApiCall('document.normalizeDocument');
+                console.log('[Document] normalizeDocument');
+            },
+            
+            // 重命名节点
+            renameNode: function(node, namespaceURI, qualifiedName) {
+                performanceMonitor.recordApiCall('document.renameNode');
+                console.log('[Document] renameNode:', node, namespaceURI, qualifiedName);
+                return node;
+            },
+            
+            // DOM Content Loaded
+            _fireContentLoaded: function() {
+                const event = this.createEvent('Event');
+                event.initEvent('DOMContentLoaded', true, true);
+                this.dispatchEvent(event);
+            },
+            
+            // 全屏API
+            exitFullscreen: function() {
+                performanceMonitor.recordApiCall('document.exitFullscreen');
+                console.log('[Document] exitFullscreen');
+                return Promise.resolve();
+            },
+            
+            get fullscreenElement() {
+                return null;
+            },
+            
+            get fullscreenEnabled() {
+                return true;
+            },
+            
+            // 指针锁定API
+            exitPointerLock: function() {
+                performanceMonitor.recordApiCall('document.exitPointerLock');
+                console.log('[Document] exitPointerLock');
+            },
+            
+            get pointerLockElement() {
+                return null;
+            },
+            
+            // Picture-in-Picture API
+            exitPictureInPicture: function() {
+                performanceMonitor.recordApiCall('document.exitPictureInPicture');
+                console.log('[Document] exitPictureInPicture');
+                return Promise.resolve();
+            },
+            
+            get pictureInPictureElement() {
+                return null;
+            },
+            
+            get pictureInPictureEnabled() {
+                return true;
+            },
+            
+            // 剪贴板API（已过时，但仍存在）
+            queryCommandEnabled: function(commandId) {
+                console.log('[Document] queryCommandEnabled:', commandId);
+                return false;
+            },
+            
+            queryCommandIndeterm: function(commandId) {
+                console.log('[Document] queryCommandIndeterm:', commandId);
+                return false;
+            },
+            
+            queryCommandState: function(commandId) {
+                console.log('[Document] queryCommandState:', commandId);
+                return false;
+            },
+            
+            queryCommandSupported: function(commandId) {
+                console.log('[Document] queryCommandSupported:', commandId);
+                return false;
+            },
+            
+            queryCommandValue: function(commandId) {
+                console.log('[Document] queryCommandValue:', commandId);
+                return '';
             }
         };
+        
+                        // 设置循环引用和关系 - 这里不能使用 globalObj.window，因为还没创建
+                // document.defaultView 将在 Window 补丁中设置
+        document.documentElement.ownerDocument = document;
+        document.head.ownerDocument = document;
+        document.body.ownerDocument = document;
+        
+        // 建立DOM树结构
+        document.documentElement.appendChild = function(child) {
+            this.childNodes = this.childNodes || [];
+            this.children = this.children || [];
+            this.childNodes.push(child);
+            if (child.nodeType === 1) {
+                this.children.push(child);
+            }
+            child.parentNode = this;
+            child.ownerDocument = document;
+            return child;
+        };
+        
+        // 将head和body添加到documentElement
+        document.documentElement.appendChild(document.head);
+        document.documentElement.appendChild(document.body);
         
         // 设置到全局对象
         globalObj.document = document;
@@ -1464,6 +2210,35 @@ const smartConfig = config.getSmartConfig();
             top: null,
             self: null,
             window: null,
+            status: '',
+            defaultStatus: '',
+            
+            // 窗口状态
+            fullScreen: false,
+            menubar: { visible: true },
+            toolbar: { visible: true },
+            locationbar: { visible: true },
+            personalbar: { visible: true },
+            scrollbars: { visible: true },
+            statusbar: { visible: true },
+            
+            // 窗口尺寸和位置（只读属性）
+            get availHeight() { return smartConfig.window.innerHeight; },
+            get availWidth() { return smartConfig.window.innerWidth; },
+            get screen() {
+                return {
+                    width: smartConfig.window.innerWidth,
+                    height: smartConfig.window.innerHeight,
+                    availWidth: smartConfig.window.innerWidth,
+                    availHeight: smartConfig.window.innerHeight,
+                    colorDepth: 24,
+                    pixelDepth: 24,
+                    orientation: {
+                        angle: 0,
+                        type: 'landscape-primary'
+                    }
+                };
+            },
             
             // 屏幕信息
             screenX: 0,
@@ -1579,35 +2354,9 @@ const smartConfig = config.getSmartConfig();
                 console.log('[Window] blur');
             },
             
-            // 滚动相关
+            // 滚动相关（兼容旧版本）
             scroll: function(x, y) {
-                console.log('[Window] scroll:', x, y);
-            },
-            scrollTo: function(x, y) {
-                console.log('[Window] scrollTo:', x, y);
-            },
-            scrollBy: function(x, y) {
-                console.log('[Window] scrollBy:', x, y);
-            },
-            
-            // 获取计算样式
-            getComputedStyle: function(element, pseudoElement) {
-                console.log('[Window] getComputedStyle:', element, pseudoElement);
-                return {
-                    getPropertyValue: function(property) {
-                        console.log('[ComputedStyle] getPropertyValue:', property);
-                        return '';
-                    },
-                    getPropertyPriority: function(property) {
-                        console.log('[ComputedStyle] getPropertyPriority:', property);
-                        return '';
-                    },
-                    item: function(index) {
-                        console.log('[ComputedStyle] item:', index);
-                        return '';
-                    },
-                    length: 0
-                };
+                return this.scrollTo(x, y);
             },
             
             // 匹配媒体
@@ -1622,14 +2371,232 @@ const smartConfig = config.getSmartConfig();
                 };
             },
             
-            // 其他API
+            // 编码解码API
             btoa: function(string) {
-                console.log('[Window] btoa:', string);
+                performanceMonitor.recordApiCall('window.btoa');
                 return Buffer.from(string, 'binary').toString('base64');
             },
             atob: function(string) {
-                console.log('[Window] atob:', string);
+                performanceMonitor.recordApiCall('window.atob');
                 return Buffer.from(string, 'base64').toString('binary');
+            },
+            
+            // URL API
+            URL: globalObj.URL || function(url, base) {
+                performanceMonitor.recordApiCall('window.URL');
+                return new URL(url, base);
+            },
+            URLSearchParams: globalObj.URLSearchParams || function(init) {
+                performanceMonitor.recordApiCall('window.URLSearchParams');
+                return new URLSearchParams(init);
+            },
+            
+            // Fetch API
+            fetch: globalObj.fetch || function(url, options) {
+                performanceMonitor.recordApiCall('window.fetch');
+                console.log('[Window] fetch:', url, options);
+                return Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    statusText: 'OK',
+                    headers: new Map(),
+                    json: () => Promise.resolve({}),
+                    text: () => Promise.resolve(''),
+                    blob: () => Promise.resolve(new Blob()),
+                    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+                    clone: function() { return this; }
+                });
+            },
+            
+            // 控制台API
+            console: globalObj.console,
+            
+            // 事件API增强
+            Event: function(type, eventInitDict = {}) {
+                performanceMonitor.recordApiCall('window.Event');
+                return createEvent(type, eventInitDict);
+            },
+            CustomEvent: function(type, eventInitDict = {}) {
+                performanceMonitor.recordApiCall('window.CustomEvent');
+                const event = createEvent(type, eventInitDict);
+                event.detail = eventInitDict.detail;
+                return event;
+            },
+            
+            // 消息传递API
+            postMessage: function(message, targetOrigin, transfer) {
+                performanceMonitor.recordApiCall('window.postMessage');
+                console.log('[Window] postMessage:', message, targetOrigin);
+                // 模拟异步消息传递
+                setTimeout(() => {
+                    const messageEvent = createEvent('message', {
+                        bubbles: false,
+                        cancelable: false
+                    });
+                    messageEvent.data = message;
+                    messageEvent.origin = globalObj.location.origin;
+                    messageEvent.source = window;
+                    if (typeof window.onmessage === 'function') {
+                        window.onmessage(messageEvent);
+                    }
+                }, 0);
+            },
+            
+            // 窗口操作增强
+            moveBy: function(deltaX, deltaY) {
+                performanceMonitor.recordApiCall('window.moveBy');
+                console.log('[Window] moveBy:', deltaX, deltaY);
+                this.screenX += deltaX;
+                this.screenY += deltaY;
+            },
+            moveTo: function(x, y) {
+                performanceMonitor.recordApiCall('window.moveTo');
+                console.log('[Window] moveTo:', x, y);
+                this.screenX = x;
+                this.screenY = y;
+            },
+            resizeBy: function(deltaX, deltaY) {
+                performanceMonitor.recordApiCall('window.resizeBy');
+                console.log('[Window] resizeBy:', deltaX, deltaY);
+                this.innerWidth += deltaX;
+                this.innerHeight += deltaY;
+            },
+            resizeTo: function(width, height) {
+                performanceMonitor.recordApiCall('window.resizeTo');
+                console.log('[Window] resizeTo:', width, height);
+                this.innerWidth = width;
+                this.innerHeight = height;
+            },
+            
+            // 打印API
+            print: function() {
+                performanceMonitor.recordApiCall('window.print');
+                console.log('[Window] print');
+            },
+            
+            // 停止加载
+            stop: function() {
+                performanceMonitor.recordApiCall('window.stop');
+                console.log('[Window] stop');
+            },
+            
+            // 查找API
+            find: function(string, caseSensitive, backwards, wrapAround, wholeWord, searchInFrames, showDialog) {
+                performanceMonitor.recordApiCall('window.find');
+                console.log('[Window] find:', string);
+                return false;
+            },
+            
+            // 选择API
+            getSelection: function() {
+                performanceMonitor.recordApiCall('window.getSelection');
+                return {
+                    anchorNode: null,
+                    anchorOffset: 0,
+                    focusNode: null,
+                    focusOffset: 0,
+                    isCollapsed: true,
+                    rangeCount: 0,
+                    type: 'None',
+                    addRange: function() {},
+                    removeAllRanges: function() {},
+                    removeRange: function() {},
+                    selectAllChildren: function() {},
+                    setBaseAndExtent: function() {},
+                    toString: function() { return ''; }
+                };
+            },
+            
+            // 滚动API增强
+            scrollTo: function(x, y) {
+                if (typeof x === 'object') {
+                    // ScrollToOptions
+                    const options = x;
+                    performanceMonitor.recordApiCall('window.scrollTo');
+                    console.log('[Window] scrollTo options:', options);
+                    this.scrollX = options.left || 0;
+                    this.scrollY = options.top || 0;
+                } else {
+                    performanceMonitor.recordApiCall('window.scrollTo');
+                    console.log('[Window] scrollTo:', x, y);
+                    this.scrollX = x || 0;
+                    this.scrollY = y || 0;
+                }
+                this.pageXOffset = this.scrollX;
+                this.pageYOffset = this.scrollY;
+            },
+            
+            scrollBy: function(x, y) {
+                if (typeof x === 'object') {
+                    // ScrollToOptions
+                    const options = x;
+                    performanceMonitor.recordApiCall('window.scrollBy');
+                    console.log('[Window] scrollBy options:', options);
+                    this.scrollX += options.left || 0;
+                    this.scrollY += options.top || 0;
+                } else {
+                    performanceMonitor.recordApiCall('window.scrollBy');
+                    console.log('[Window] scrollBy:', x, y);
+                    this.scrollX += x || 0;
+                    this.scrollY += y || 0;
+                }
+                this.pageXOffset = this.scrollX;
+                this.pageYOffset = this.scrollY;
+            },
+            
+            // 获取元素位置
+            getComputedStyle: function(element, pseudoElement) {
+                performanceMonitor.recordApiCall('window.getComputedStyle');
+                console.log('[Window] getComputedStyle:', element?.tagName, pseudoElement);
+                
+                // 创建更完整的CSSStyleDeclaration模拟
+                const computedStyle = {
+                    // 常用CSS属性的默认值
+                    display: 'block',
+                    position: 'static',
+                    top: 'auto',
+                    left: 'auto',
+                    right: 'auto',
+                    bottom: 'auto',
+                    width: 'auto',
+                    height: 'auto',
+                    margin: '0px',
+                    padding: '0px',
+                    border: '0px',
+                    backgroundColor: 'rgba(0, 0, 0, 0)',
+                    color: 'rgb(0, 0, 0)',
+                    fontSize: '16px',
+                    fontFamily: 'sans-serif',
+                    fontWeight: '400',
+                    lineHeight: 'normal',
+                    textAlign: 'start',
+                    visibility: 'visible',
+                    opacity: '1',
+                    zIndex: 'auto',
+                    overflow: 'visible',
+                    float: 'none',
+                    clear: 'none',
+                    
+                    // 方法
+                    getPropertyValue: function(property) {
+                        return this[property] || '';
+                    },
+                    getPropertyPriority: function(property) {
+                        return '';
+                    },
+                    item: function(index) {
+                        const properties = Object.keys(this).filter(key => typeof this[key] === 'string');
+                        return properties[index] || '';
+                    },
+                    setProperty: function() {},
+                    removeProperty: function() {},
+                    
+                    get length() {
+                        return Object.keys(this).filter(key => typeof this[key] === 'string').length;
+                    }
+                };
+                
+                return computedStyle;
             },
             
             // 引用自身
@@ -1640,6 +2607,11 @@ const smartConfig = config.getSmartConfig();
         // 设置循环引用
         window.self = window;
         window.window = window;
+        
+        // 设置 document 的 defaultView 引用
+        if (globalObj.document) {
+            globalObj.document.defaultView = window;
+        }
         
         // 设置到全局对象
         globalObj.window = window;
@@ -1918,6 +2890,326 @@ const smartConfig = config.getSmartConfig();
                 }
             };
         }
+        
+        // Blob API
+        globalObj.Blob = function(parts, options = {}) {
+            performanceMonitor.recordApiCall('Blob.constructor');
+            return {
+                size: 0,
+                type: options.type || '',
+                slice: function(start, end, contentType) {
+                    console.log('[Blob] slice:', start, end, contentType);
+                    return new Blob([], { type: contentType });
+                },
+                stream: function() {
+                    console.log('[Blob] stream');
+                    return {};
+                },
+                text: function() {
+                    console.log('[Blob] text');
+                    return Promise.resolve('');
+                },
+                arrayBuffer: function() {
+                    console.log('[Blob] arrayBuffer');
+                    return Promise.resolve(new ArrayBuffer(0));
+                }
+            };
+        };
+        
+        // File API
+        globalObj.File = function(parts, name, options = {}) {
+            performanceMonitor.recordApiCall('File.constructor');
+            const file = new Blob(parts, options);
+            file.name = name;
+            file.lastModified = Date.now();
+            file.lastModifiedDate = new Date();
+            return file;
+        };
+        
+        // FileReader API
+        globalObj.FileReader = function() {
+            performanceMonitor.recordApiCall('FileReader.constructor');
+            return {
+                readyState: 0, // EMPTY
+                result: null,
+                error: null,
+                
+                // 常量
+                EMPTY: 0,
+                LOADING: 1,
+                DONE: 2,
+                
+                readAsText: function(file, encoding) {
+                    performanceMonitor.recordApiCall('FileReader.readAsText');
+                    console.log('[FileReader] readAsText:', file, encoding);
+                    this.readyState = 2; // DONE
+                    this.result = '';
+                    setTimeout(() => {
+                        if (typeof this.onload === 'function') {
+                            this.onload({ target: this });
+                        }
+                    }, 0);
+                },
+                
+                readAsDataURL: function(file) {
+                    performanceMonitor.recordApiCall('FileReader.readAsDataURL');
+                    console.log('[FileReader] readAsDataURL:', file);
+                    this.readyState = 2; // DONE
+                    this.result = 'data:text/plain;base64,';
+                    setTimeout(() => {
+                        if (typeof this.onload === 'function') {
+                            this.onload({ target: this });
+                        }
+                    }, 0);
+                },
+                
+                readAsArrayBuffer: function(file) {
+                    performanceMonitor.recordApiCall('FileReader.readAsArrayBuffer');
+                    console.log('[FileReader] readAsArrayBuffer:', file);
+                    this.readyState = 2; // DONE
+                    this.result = new ArrayBuffer(0);
+                    setTimeout(() => {
+                        if (typeof this.onload === 'function') {
+                            this.onload({ target: this });
+                        }
+                    }, 0);
+                },
+                
+                abort: function() {
+                    performanceMonitor.recordApiCall('FileReader.abort');
+                    console.log('[FileReader] abort');
+                    this.readyState = 2; // DONE
+                    if (typeof this.onabort === 'function') {
+                        this.onabort({ target: this });
+                    }
+                },
+                
+                addEventListener: function() {},
+                removeEventListener: function() {}
+            };
+        };
+        
+        // FormData API
+        globalObj.FormData = function(form) {
+            performanceMonitor.recordApiCall('FormData.constructor');
+            const data = new Map();
+            return {
+                append: function(name, value, filename) {
+                    performanceMonitor.recordApiCall('FormData.append');
+                    if (!data.has(name)) {
+                        data.set(name, []);
+                    }
+                    data.get(name).push({ value, filename });
+                },
+                
+                delete: function(name) {
+                    performanceMonitor.recordApiCall('FormData.delete');
+                    data.delete(name);
+                },
+                
+                get: function(name) {
+                    performanceMonitor.recordApiCall('FormData.get');
+                    const values = data.get(name);
+                    return values && values.length > 0 ? values[0].value : null;
+                },
+                
+                getAll: function(name) {
+                    performanceMonitor.recordApiCall('FormData.getAll');
+                    const values = data.get(name);
+                    return values ? values.map(v => v.value) : [];
+                },
+                
+                has: function(name) {
+                    performanceMonitor.recordApiCall('FormData.has');
+                    return data.has(name);
+                },
+                
+                set: function(name, value, filename) {
+                    performanceMonitor.recordApiCall('FormData.set');
+                    data.set(name, [{ value, filename }]);
+                },
+                
+                entries: function() {
+                    performanceMonitor.recordApiCall('FormData.entries');
+                    return data.entries();
+                },
+                
+                keys: function() {
+                    performanceMonitor.recordApiCall('FormData.keys');
+                    return data.keys();
+                },
+                
+                values: function() {
+                    performanceMonitor.recordApiCall('FormData.values');
+                    return Array.from(data.values()).flat().map(v => v.value);
+                },
+                
+                forEach: function(callback, thisArg) {
+                    performanceMonitor.recordApiCall('FormData.forEach');
+                    data.forEach((values, key) => {
+                        values.forEach(valueObj => {
+                            callback.call(thisArg, valueObj.value, key, this);
+                        });
+                    });
+                }
+            };
+        };
+        
+        // Headers API
+        globalObj.Headers = function(init) {
+            performanceMonitor.recordApiCall('Headers.constructor');
+            const headers = new Map();
+            
+            if (init) {
+                if (init instanceof Headers) {
+                    init.forEach((value, key) => headers.set(key.toLowerCase(), value));
+                } else if (Array.isArray(init)) {
+                    init.forEach(([key, value]) => headers.set(key.toLowerCase(), value));
+                } else if (typeof init === 'object') {
+                    Object.entries(init).forEach(([key, value]) => headers.set(key.toLowerCase(), value));
+                }
+            }
+            
+            return {
+                append: function(name, value) {
+                    performanceMonitor.recordApiCall('Headers.append');
+                    const key = name.toLowerCase();
+                    const existing = headers.get(key);
+                    headers.set(key, existing ? `${existing}, ${value}` : value);
+                },
+                
+                delete: function(name) {
+                    performanceMonitor.recordApiCall('Headers.delete');
+                    headers.delete(name.toLowerCase());
+                },
+                
+                get: function(name) {
+                    performanceMonitor.recordApiCall('Headers.get');
+                    return headers.get(name.toLowerCase()) || null;
+                },
+                
+                has: function(name) {
+                    performanceMonitor.recordApiCall('Headers.has');
+                    return headers.has(name.toLowerCase());
+                },
+                
+                set: function(name, value) {
+                    performanceMonitor.recordApiCall('Headers.set');
+                    headers.set(name.toLowerCase(), value);
+                },
+                
+                entries: function() {
+                    return headers.entries();
+                },
+                
+                keys: function() {
+                    return headers.keys();
+                },
+                
+                values: function() {
+                    return headers.values();
+                },
+                
+                forEach: function(callback, thisArg) {
+                    headers.forEach((value, key) => callback.call(thisArg, value, key, this));
+                }
+            };
+        };
+        
+        // Request API
+        globalObj.Request = function(input, init = {}) {
+            performanceMonitor.recordApiCall('Request.constructor');
+            const url = typeof input === 'string' ? input : input.url;
+            return {
+                url: url,
+                method: init.method || 'GET',
+                headers: new Headers(init.headers),
+                body: init.body || null,
+                mode: init.mode || 'cors',
+                credentials: init.credentials || 'same-origin',
+                cache: init.cache || 'default',
+                redirect: init.redirect || 'follow',
+                referrer: init.referrer || 'about:client',
+                integrity: init.integrity || '',
+                
+                clone: function() {
+                    return new Request(this.url, {
+                        method: this.method,
+                        headers: this.headers,
+                        body: this.body,
+                        mode: this.mode,
+                        credentials: this.credentials,
+                        cache: this.cache,
+                        redirect: this.redirect,
+                        referrer: this.referrer,
+                        integrity: this.integrity
+                    });
+                },
+                
+                text: function() {
+                    return Promise.resolve(this.body || '');
+                },
+                
+                json: function() {
+                    return Promise.resolve(JSON.parse(this.body || '{}'));
+                },
+                
+                arrayBuffer: function() {
+                    return Promise.resolve(new ArrayBuffer(0));
+                },
+                
+                blob: function() {
+                    return Promise.resolve(new Blob());
+                },
+                
+                formData: function() {
+                    return Promise.resolve(new FormData());
+                }
+            };
+        };
+        
+        // Response API
+        globalObj.Response = function(body, init = {}) {
+            performanceMonitor.recordApiCall('Response.constructor');
+            return {
+                body: body,
+                status: init.status || 200,
+                statusText: init.statusText || 'OK',
+                headers: new Headers(init.headers),
+                ok: (init.status || 200) >= 200 && (init.status || 200) < 300,
+                redirected: false,
+                type: 'basic',
+                url: '',
+                
+                clone: function() {
+                    return new Response(this.body, {
+                        status: this.status,
+                        statusText: this.statusText,
+                        headers: this.headers
+                    });
+                },
+                
+                text: function() {
+                    return Promise.resolve(String(this.body || ''));
+                },
+                
+                json: function() {
+                    return Promise.resolve(JSON.parse(this.body || '{}'));
+                },
+                
+                arrayBuffer: function() {
+                    return Promise.resolve(new ArrayBuffer(0));
+                },
+                
+                blob: function() {
+                    return Promise.resolve(new Blob());
+                },
+                
+                formData: function() {
+                    return Promise.resolve(new FormData());
+                }
+            };
+        };
         
         performanceMonitor.endTimer('modernAPIs');
         console.log('✓ 现代API增强加载成功');
