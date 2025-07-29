@@ -173,15 +173,15 @@
         // 默认配置
         defaults: {
             location: {
-                href: 'http://iwencai.com/unifiedwap/result?w=2024-12-12%E8%82%A1%E7%A5%A8&querytype=stock&addSign=1734356485569',
-                protocol: 'http:',
-                host: 'iwencai.com',
-                hostname: 'iwencai.com',
+                href: '',
+                protocol: ':',
+                host: '',
+                hostname: '',
                 port: '',
-                pathname: '/unifiedwap/result',
-                search: '?w=2024-12-12%E8%82%A1%E7%A5%A8&querytype=stock&addSign=1734356485569',
+                pathname: '',
+                search: '',
                 hash: '',
-                origin: 'http://iwencai.com'
+                origin: ''
             },
             navigator: {
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
