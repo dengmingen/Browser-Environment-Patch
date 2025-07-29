@@ -44,17 +44,13 @@
 
 ## 安装和使用
 
-### 安装
 
-```bash
-npm install browser-env-patch
-```
 
 ### 基本使用
 
 ```javascript
 // 加载环境补丁
-const browserPatch = require('browser-env-patch');
+const browserPatch = require('./main.js');
 
 // 现在可以使用浏览器API了
 console.log(navigator.userAgent);
