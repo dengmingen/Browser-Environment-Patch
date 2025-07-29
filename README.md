@@ -301,7 +301,6 @@ node example.js
 ├── document.js      # Document对象补丁
 ├── navigator.js     # Navigator对象补丁
 ├── error.js         # Error对象补丁
-├── test_main.js     # 测试文件
 ├── example.js       # 使用示例
 └── README.md        # 说明文档
 ```
@@ -343,27 +342,6 @@ npm test
 npm run build
 ```
 
-### 项目结构
-
-```
-├── main.js              # 主环境补丁文件
-├── index.js             # 入口文件
-├── index.d.ts           # TypeScript 类型定义
-├── build-simple.js      # 构建脚本
-├── test-build.js        # 测试脚本
-├── publish.js           # 发布脚本
-├── demo.js              # 演示文件
-├── dist/                # 构建输出目录
-│   ├── index.js         # 发布的主文件
-│   ├── main.js          # 主模块
-│   ├── index.d.ts       # 类型定义
-│   ├── package.json     # 发布配置
-│   ├── README.md        # 文档
-│   ├── LICENSE          # 许可证
-│   ├── example.js       # 使用示例
-│   └── browser-example.html # 浏览器示例
-└── README.md            # 项目文档
-```
 
 ## 贡献
 
