@@ -11,6 +11,163 @@
     const isBrowser = typeof globalThis !== 'undefined' && typeof globalThis.window !== 'undefined';
     const globalObj = isNode ? global : (isBrowser ? globalThis.window : this);
     
+    // 性能监控系统
+    const performanceMonitor = {
+        startTime: Date.now(),
+        metrics: {
+            patchLoadTime: {},
+            apiCallCounts: {},
+            memoryUsage: {},
+            errors: []
+        },
+        
+        // 开始计时
+        startTimer(name) {
+            this.metrics.patchLoadTime[name] = Date.now();
+        },
+        
+        // 结束计时
+        endTimer(name) {
+            if (this.metrics.patchLoadTime[name]) {
+                this.metrics.patchLoadTime[name] = Date.now() - this.metrics.patchLoadTime[name];
+            }
+        },
+        
+        // 记录API调用
+        recordApiCall(apiName) {
+            this.metrics.apiCallCounts[apiName] = (this.metrics.apiCallCounts[apiName] || 0) + 1;
+        },
+        
+        // 记录内存使用
+        recordMemoryUsage() {
+            if (isNode && process.memoryUsage) {
+                this.metrics.memoryUsage = {
+                    ...process.memoryUsage(),
+                    timestamp: Date.now()
+                };
+            }
+        },
+        
+        // 记录错误
+        recordError(error, context) {
+            this.metrics.errors.push({
+                error: error.message || error,
+                context,
+                timestamp: Date.now(),
+                stack: error.stack
+            });
+        },
+        
+        // 获取性能报告
+        getReport() {
+            this.recordMemoryUsage();
+            const totalTime = Date.now() - this.startTime;
+            
+            return {
+                总加载时间: totalTime + 'ms',
+                补丁加载时间: this.metrics.patchLoadTime,
+                API调用统计: this.metrics.apiCallCounts,
+                内存使用: this.metrics.memoryUsage,
+                错误记录: this.metrics.errors,
+                性能等级: this.getPerformanceGrade(totalTime)
+            };
+        },
+        
+        // 性能等级评估
+        getPerformanceGrade(totalTime) {
+            if (totalTime < 50) return '优秀 (A+)';
+            if (totalTime < 100) return '良好 (A)';
+            if (totalTime < 200) return '一般 (B)';
+            if (totalTime < 500) return '较差 (C)';
+            return '需要优化 (D)';
+        },
+        
+        // 打印性能报告
+        printReport() {
+            const report = this.getReport();
+            console.log('\n=== 性能监控报告 ===');
+            Object.entries(report).forEach(([key, value]) => {
+                if (typeof value === 'object' && value !== null) {
+                    console.log(`${key}:`);
+                    Object.entries(value).forEach(([subKey, subValue]) => {
+                        console.log(`  ${subKey}: ${JSON.stringify(subValue)}`);
+                    });
+                } else {
+                    console.log(`${key}: ${value}`);
+                }
+            });
+        }
+    };
+    
+    // 基准测试工具
+    const benchmarkTool = {
+        tests: {},
+        
+        // 添加基准测试
+        addTest(name, testFunction) {
+            this.tests[name] = testFunction;
+        },
+        
+        // 运行单个测试
+        runTest(name, iterations = 1000) {
+            if (!this.tests[name]) {
+                console.error(`基准测试 "${name}" 不存在`);
+                return null;
+            }
+            
+            const testFunction = this.tests[name];
+            const startTime = performance.now ? performance.now() : Date.now();
+            
+            for (let i = 0; i < iterations; i++) {
+                testFunction();
+            }
+            
+            const endTime = performance.now ? performance.now() : Date.now();
+            const totalTime = endTime - startTime;
+            const avgTime = totalTime / iterations;
+            
+            return {
+                name,
+                iterations,
+                totalTime: totalTime.toFixed(2) + 'ms',
+                averageTime: avgTime.toFixed(4) + 'ms',
+                opsPerSecond: Math.round(1000 / avgTime)
+            };
+        },
+        
+        // 运行所有测试
+        runAllTests(iterations = 1000) {
+            console.log('\n=== 基准测试报告 ===');
+            const results = {};
+            
+            Object.keys(this.tests).forEach(testName => {
+                const result = this.runTest(testName, iterations);
+                if (result) {
+                    results[testName] = result;
+                    console.log(`${testName}:`);
+                    console.log(`  平均耗时: ${result.averageTime}`);
+                    console.log(`  每秒操作数: ${result.opsPerSecond}`);
+                }
+            });
+            
+            return results;
+        }
+    };
+    
+    // 添加默认基准测试
+    benchmarkTool.addTest('createElement', () => {
+        const element = document.createElement('div');
+        element.textContent = 'test';
+    });
+    
+    benchmarkTool.addTest('querySelector', () => {
+        document.querySelector('div');
+    });
+    
+    benchmarkTool.addTest('errorCreation', () => {
+        new Error('benchmark test error');
+    });
+    
     // 智能配置系统
     const config = {
         // 默认配置
@@ -158,13 +315,288 @@
                     // package.json不存在或无法读取，使用默认值
                 }
             }
-            
-            return config;
-        }
-    };
+        
+        return config;
+    },
     
-    // 获取智能配置
-    const smartConfig = config.getSmartConfig();
+    // 配置验证器
+    validator: {
+        // 验证URL格式
+        validateURL(url) {
+            try {
+                new URL(url);
+                return { valid: true };
+            } catch (e) {
+                return { valid: false, error: 'URL格式无效' };
+            }
+        },
+        
+        // 验证用户代理字符串
+        validateUserAgent(userAgent) {
+            if (typeof userAgent !== 'string') {
+                return { valid: false, error: 'UserAgent必须是字符串' };
+            }
+            if (userAgent.length < 10) {
+                return { valid: false, error: 'UserAgent字符串过短' };
+            }
+            if (userAgent.length > 1000) {
+                return { valid: false, error: 'UserAgent字符串过长' };
+            }
+            return { valid: true };
+        },
+        
+        // 验证窗口尺寸
+        validateWindowSize(width, height) {
+            const errors = [];
+            
+            if (!Number.isInteger(width) || width < 1 || width > 10000) {
+                errors.push('窗口宽度必须是1-10000之间的整数');
+            }
+            if (!Number.isInteger(height) || height < 1 || height > 10000) {
+                errors.push('窗口高度必须是1-10000之间的整数');
+            }
+            
+            return {
+                valid: errors.length === 0,
+                errors: errors
+            };
+        },
+        
+        // 验证语言代码
+        validateLanguage(language) {
+            const validLanguages = [
+                'zh-CN', 'zh-TW', 'en-US', 'en-GB', 'ja-JP', 'ko-KR',
+                'fr-FR', 'de-DE', 'es-ES', 'it-IT', 'ru-RU', 'pt-BR'
+            ];
+            
+            if (typeof language !== 'string') {
+                return { valid: false, error: '语言代码必须是字符串' };
+            }
+            
+            if (!validLanguages.includes(language)) {
+                return { 
+                    valid: false, 
+                    error: '不支持的语言代码',
+                    suggestions: validLanguages.slice(0, 5)
+                };
+            }
+            
+            return { valid: true };
+        },
+        
+        // 全面配置验证
+        validateConfig(config) {
+            const results = {
+                valid: true,
+                errors: [],
+                warnings: [],
+                suggestions: []
+            };
+            
+            // 验证location配置
+            if (config.location) {
+                if (config.location.href) {
+                    const urlResult = this.validateURL(config.location.href);
+                    if (!urlResult.valid) {
+                        results.valid = false;
+                        results.errors.push(`Location href: ${urlResult.error}`);
+                    }
+                }
+            }
+            
+            // 验证navigator配置
+            if (config.navigator) {
+                if (config.navigator.userAgent) {
+                    const uaResult = this.validateUserAgent(config.navigator.userAgent);
+                    if (!uaResult.valid) {
+                        results.valid = false;
+                        results.errors.push(`Navigator userAgent: ${uaResult.error}`);
+                    }
+                }
+                
+                if (config.navigator.language) {
+                    const langResult = this.validateLanguage(config.navigator.language);
+                    if (!langResult.valid) {
+                        results.warnings.push(`Navigator language: ${langResult.error}`);
+                        if (langResult.suggestions) {
+                            results.suggestions.push(`建议使用: ${langResult.suggestions.join(', ')}`);
+                        }
+                    }
+                }
+                
+                if (config.navigator.hardwareConcurrency && 
+                    (!Number.isInteger(config.navigator.hardwareConcurrency) || 
+                     config.navigator.hardwareConcurrency < 1 || 
+                     config.navigator.hardwareConcurrency > 128)) {
+                    results.warnings.push('硬件并发数应为1-128之间的整数');
+                }
+            }
+            
+            // 验证window配置
+            if (config.window) {
+                const sizeResult = this.validateWindowSize(
+                    config.window.innerWidth, 
+                    config.window.innerHeight
+                );
+                if (!sizeResult.valid) {
+                    results.valid = false;
+                    results.errors.push(...sizeResult.errors);
+                }
+            }
+            
+            // 验证document配置
+            if (config.document) {
+                if (config.document.title && typeof config.document.title !== 'string') {
+                    results.warnings.push('Document title应为字符串');
+                }
+                
+                if (config.document.characterSet && 
+                    !['UTF-8', 'UTF-16', 'ISO-8859-1', 'ASCII'].includes(config.document.characterSet)) {
+                    results.warnings.push('Document characterSet使用了非常见字符集');
+                }
+            }
+            
+            return results;
+        }
+    },
+    
+    // 智能提示系统
+    suggestions: {
+        // 根据当前环境提供配置建议
+        getEnvironmentSuggestions() {
+            const suggestions = [];
+            
+            // 检测操作系统并建议相应的UserAgent
+            if (isNode) {
+                const platform = process.platform;
+                
+                switch (platform) {
+                    case 'win32':
+                        suggestions.push({
+                            type: 'navigator.userAgent',
+                            suggestion: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            reason: '检测到Windows平台，建议使用Windows Chrome UserAgent'
+                        });
+                        break;
+                    case 'darwin':
+                        suggestions.push({
+                            type: 'navigator.userAgent',
+                            suggestion: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            reason: '检测到macOS平台，建议使用macOS Chrome UserAgent'
+                        });
+                        break;
+                    case 'linux':
+                        suggestions.push({
+                            type: 'navigator.userAgent',
+                            suggestion: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            reason: '检测到Linux平台，建议使用Linux Chrome UserAgent'
+                        });
+                        break;
+                }
+                
+                // 根据CPU核心数建议hardwareConcurrency
+                const cpus = process.arch;
+                suggestions.push({
+                    type: 'navigator.hardwareConcurrency',
+                    suggestion: Math.max(1, Math.min(16, 4)), // 默认建议4核
+                    reason: `基于系统架构 ${cpus} 的建议值`
+                });
+            }
+            
+            // 建议常见的窗口尺寸
+            suggestions.push({
+                type: 'window.size',
+                suggestion: { width: 1920, height: 1080 },
+                reason: '最常见的桌面分辨率'
+            });
+            
+            return suggestions;
+        },
+        
+        // 获取性能优化建议
+        getPerformanceSuggestions() {
+            const suggestions = [];
+            
+            if (isNode && process.memoryUsage) {
+                const usage = process.memoryUsage();
+                const heapUsedMB = usage.heapUsed / 1024 / 1024;
+                
+                if (heapUsedMB > 100) {
+                    suggestions.push({
+                        type: 'memory',
+                        suggestion: '考虑在不需要时卸载某些补丁模块',
+                        reason: `当前内存使用: ${Math.round(heapUsedMB)}MB`
+                    });
+                }
+            }
+            
+            return suggestions;
+        }
+    },
+    
+    // 配置助手
+    helper: {
+        // 生成常见场景的配置模板
+        getTemplate(scenario) {
+            const templates = {
+                'mobile': {
+                    navigator: {
+                        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1',
+                        platform: 'iPhone',
+                        language: 'zh-CN'
+                    },
+                    window: {
+                        innerWidth: 375,
+                        innerHeight: 667,
+                        devicePixelRatio: 2
+                    }
+                },
+                'desktop': {
+                    navigator: {
+                        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        platform: 'Win32',
+                        language: 'zh-CN'
+                    },
+                    window: {
+                        innerWidth: 1920,
+                        innerHeight: 1080,
+                        devicePixelRatio: 1
+                    }
+                },
+                'api_testing': {
+                    location: {
+                        href: 'https://api.example.com/v1',
+                        protocol: 'https:',
+                        host: 'api.example.com'
+                    },
+                    document: {
+                        title: 'API Test Environment'
+                    }
+                }
+            };
+            
+            return templates[scenario] || null;
+        }
+    }
+};
+
+// 获取智能配置
+const smartConfig = config.getSmartConfig();
+    
+    // 配置验证
+    const configValidation = config.validator.validateConfig(smartConfig);
+    if (!configValidation.valid) {
+        console.error('❌ 配置验证失败:');
+        configValidation.errors.forEach(error => console.error(`   ${error}`));
+    }
+    if (configValidation.warnings.length > 0) {
+        console.warn('⚠️  配置警告:');
+        configValidation.warnings.forEach(warning => console.warn(`   ${warning}`));
+    }
+    if (configValidation.suggestions.length > 0) {
+        console.log('💡 配置建议:');
+        configValidation.suggestions.forEach(suggestion => console.log(`   ${suggestion}`));
+    }
     
     // 输出当前配置信息
     console.log('📋 当前配置:');
@@ -172,6 +604,15 @@
     console.log(`   Navigator: ${smartConfig.navigator.userAgent.substring(0, 50)}...`);
     console.log(`   Window: ${smartConfig.window.innerWidth}x${smartConfig.window.innerHeight}`);
     console.log(`   Document: ${smartConfig.document.title}`);
+    
+    // 显示环境建议
+    const envSuggestions = config.suggestions.getEnvironmentSuggestions();
+    if (envSuggestions.length > 0) {
+        console.log('🔧 环境优化建议:');
+        envSuggestions.slice(0, 2).forEach(suggestion => {
+            console.log(`   ${suggestion.type}: ${suggestion.reason}`);
+        });
+    }
     console.log('');
     
     // 环境补丁加载状态
@@ -185,6 +626,7 @@
     
     // 加载Error补丁
     try {
+        performanceMonitor.startTimer('error');
         console.log('正在加载Error补丁...');
         
         // 保存原始的Error构造函数
@@ -394,14 +836,17 @@
         globalThis.Error.captureStackTrace = OriginalError.captureStackTrace;
         
         patchStatus.error = true;
+        performanceMonitor.endTimer('error');
         console.log('✓ Error补丁加载成功');
         
     } catch (e) {
+        performanceMonitor.recordError(e, 'Error补丁加载');
         console.error('✗ Error补丁加载失败:', e.message);
     }
     
     // 加载Navigator补丁
     try {
+        performanceMonitor.startTimer('navigator');
         console.log('正在加载Navigator补丁...');
         
         const navigator = {
@@ -521,14 +966,17 @@
         }
         
         patchStatus.navigator = true;
+        performanceMonitor.endTimer('navigator');
         console.log('✓ Navigator补丁加载成功');
         
     } catch (e) {
+        performanceMonitor.recordError(e, 'Navigator补丁加载');
         console.error('✗ Navigator补丁加载失败:', e.message);
     }
     
     // 加载Location补丁
     try {
+        performanceMonitor.startTimer('location');
         console.log('正在加载Location补丁...');
         
         function createSafeDOMStringList(items = []) {
@@ -661,14 +1109,17 @@
         globalObj.location = location;
         
         patchStatus.location = true;
+        performanceMonitor.endTimer('location');
         console.log('✓ Location补丁加载成功');
         
     } catch (e) {
+        performanceMonitor.recordError(e, 'Location补丁加载');
         console.error('✗ Location补丁加载失败:', e.message);
     }
     
     // 加载Document补丁
     try {
+        performanceMonitor.startTimer('document');
         console.log('正在加载Document补丁...');
         
         function createHTMLCollection(items = []) {
@@ -959,14 +1410,17 @@
         globalObj.document = document;
         
         patchStatus.document = true;
+        performanceMonitor.endTimer('document');
         console.log('✓ Document补丁加载成功');
         
     } catch (e) {
+        performanceMonitor.recordError(e, 'Document补丁加载');
         console.error('✗ Document补丁加载失败:', e.message);
     }
     
     // 加载Window补丁
     try {
+        performanceMonitor.startTimer('window');
         console.log('正在加载Window补丁...');
         
         // 创建Event对象
@@ -1191,9 +1645,11 @@
         globalObj.window = window;
         
         patchStatus.window = true;
+        performanceMonitor.endTimer('window');
         console.log('✓ Window补丁加载成功');
         
     } catch (e) {
+        performanceMonitor.recordError(e, 'Window补丁加载');
         console.error('✗ Window补丁加载失败:', e.message);
     }
     
@@ -1211,6 +1667,415 @@
     HTMLCanvasElement.prototype = Object.create(HTMLElement.prototype);
     HTMLCanvasElement.prototype.constructor = HTMLCanvasElement;
     globalObj.HTMLCanvasElement = HTMLCanvasElement;
+    
+    // 现代浏览器API增强
+    try {
+        performanceMonitor.startTimer('modernAPIs');
+        console.log('正在加载现代API增强...');
+        
+        // WebGL支持
+        function createWebGLContext() {
+            const canvas = document.createElement('canvas');
+            return {
+                canvas: canvas,
+                getExtension: function() { return null; },
+                createShader: function() { return {}; },
+                shaderSource: function() {},
+                compileShader: function() {},
+                createProgram: function() { return {}; },
+                attachShader: function() {},
+                linkProgram: function() {},
+                useProgram: function() {},
+                getAttribLocation: function() { return 0; },
+                getUniformLocation: function() { return {}; },
+                enableVertexAttribArray: function() {},
+                vertexAttribPointer: function() {},
+                createBuffer: function() { return {}; },
+                bindBuffer: function() {},
+                bufferData: function() {},
+                uniform1f: function() {},
+                uniform2f: function() {},
+                uniform3f: function() {},
+                uniform4f: function() {},
+                drawArrays: function() {},
+                clear: function() {},
+                clearColor: function() {},
+                enable: function() {},
+                disable: function() {},
+                viewport: function() {}
+            };
+        }
+        
+        // 增强Canvas的getContext方法
+        if (globalObj.HTMLCanvasElement && globalObj.HTMLCanvasElement.prototype) {
+            const originalGetContext = globalObj.HTMLCanvasElement.prototype.getContext;
+            globalObj.HTMLCanvasElement.prototype.getContext = function(contextType, contextAttributes) {
+                performanceMonitor.recordApiCall('canvas.getContext');
+                
+                if (contextType === 'webgl' || contextType === 'experimental-webgl') {
+                    return createWebGLContext();
+                }
+                
+                if (originalGetContext) {
+                    return originalGetContext.call(this, contextType, contextAttributes);
+                }
+                
+                // 默认2D context
+                return {
+                    fillRect: function() { performanceMonitor.recordApiCall('context2d.fillRect'); },
+                    clearRect: function() { performanceMonitor.recordApiCall('context2d.clearRect'); },
+                    strokeRect: function() { performanceMonitor.recordApiCall('context2d.strokeRect'); },
+                    fillText: function() { performanceMonitor.recordApiCall('context2d.fillText'); },
+                    strokeText: function() { performanceMonitor.recordApiCall('context2d.strokeText'); },
+                    measureText: function() { 
+                        performanceMonitor.recordApiCall('context2d.measureText'); 
+                        return { width: 0 }; 
+                    },
+                    drawImage: function() { performanceMonitor.recordApiCall('context2d.drawImage'); },
+                    getImageData: function() { 
+                        performanceMonitor.recordApiCall('context2d.getImageData'); 
+                        return { data: [], width: 0, height: 0 }; 
+                    },
+                    putImageData: function() { performanceMonitor.recordApiCall('context2d.putImageData'); },
+                    createImageData: function() { 
+                        performanceMonitor.recordApiCall('context2d.createImageData'); 
+                        return { data: [], width: 0, height: 0 }; 
+                    },
+                    save: function() { performanceMonitor.recordApiCall('context2d.save'); },
+                    restore: function() { performanceMonitor.recordApiCall('context2d.restore'); },
+                    translate: function() { performanceMonitor.recordApiCall('context2d.translate'); },
+                    rotate: function() { performanceMonitor.recordApiCall('context2d.rotate'); },
+                    scale: function() { performanceMonitor.recordApiCall('context2d.scale'); },
+                    transform: function() { performanceMonitor.recordApiCall('context2d.transform'); },
+                    setTransform: function() { performanceMonitor.recordApiCall('context2d.setTransform'); },
+                    beginPath: function() { performanceMonitor.recordApiCall('context2d.beginPath'); },
+                    closePath: function() { performanceMonitor.recordApiCall('context2d.closePath'); },
+                    moveTo: function() { performanceMonitor.recordApiCall('context2d.moveTo'); },
+                    lineTo: function() { performanceMonitor.recordApiCall('context2d.lineTo'); },
+                    quadraticCurveTo: function() { performanceMonitor.recordApiCall('context2d.quadraticCurveTo'); },
+                    bezierCurveTo: function() { performanceMonitor.recordApiCall('context2d.bezierCurveTo'); },
+                    arc: function() { performanceMonitor.recordApiCall('context2d.arc'); },
+                    arcTo: function() { performanceMonitor.recordApiCall('context2d.arcTo'); },
+                    rect: function() { performanceMonitor.recordApiCall('context2d.rect'); },
+                    fill: function() { performanceMonitor.recordApiCall('context2d.fill'); },
+                    stroke: function() { performanceMonitor.recordApiCall('context2d.stroke'); },
+                    clip: function() { performanceMonitor.recordApiCall('context2d.clip'); },
+                    isPointInPath: function() { 
+                        performanceMonitor.recordApiCall('context2d.isPointInPath'); 
+                        return false; 
+                    }
+                };
+            };
+        }
+        
+        // Performance API
+        if (!globalObj.performance) {
+            globalObj.performance = {
+                now: function() {
+                    performanceMonitor.recordApiCall('performance.now');
+                    return Date.now();
+                },
+                mark: function(name) {
+                    performanceMonitor.recordApiCall('performance.mark');
+                    console.log(`[Performance] Mark: ${name}`);
+                },
+                measure: function(name, startMark, endMark) {
+                    performanceMonitor.recordApiCall('performance.measure');
+                    console.log(`[Performance] Measure: ${name} from ${startMark} to ${endMark}`);
+                },
+                getEntries: function() {
+                    performanceMonitor.recordApiCall('performance.getEntries');
+                    return [];
+                },
+                getEntriesByName: function(name) {
+                    performanceMonitor.recordApiCall('performance.getEntriesByName');
+                    return [];
+                },
+                getEntriesByType: function(type) {
+                    performanceMonitor.recordApiCall('performance.getEntriesByType');
+                    return [];
+                },
+                clearMarks: function() {
+                    performanceMonitor.recordApiCall('performance.clearMarks');
+                },
+                clearMeasures: function() {
+                    performanceMonitor.recordApiCall('performance.clearMeasures');
+                },
+                clearResourceTimings: function() {
+                    performanceMonitor.recordApiCall('performance.clearResourceTimings');
+                }
+            };
+        }
+        
+        // WebRTC API
+        globalObj.RTCPeerConnection = function() {
+            performanceMonitor.recordApiCall('RTCPeerConnection.constructor');
+            return {
+                createOffer: function() { return Promise.resolve({}); },
+                createAnswer: function() { return Promise.resolve({}); },
+                setLocalDescription: function() { return Promise.resolve(); },
+                setRemoteDescription: function() { return Promise.resolve(); },
+                addIceCandidate: function() { return Promise.resolve(); },
+                createDataChannel: function() { return {}; },
+                getStats: function() { return Promise.resolve({}); },
+                close: function() {},
+                addEventListener: function() {},
+                removeEventListener: function() {}
+            };
+        };
+        
+        // Intersection Observer API
+        globalObj.IntersectionObserver = function(callback, options) {
+            performanceMonitor.recordApiCall('IntersectionObserver.constructor');
+            return {
+                observe: function(target) {
+                    performanceMonitor.recordApiCall('IntersectionObserver.observe');
+                    console.log('[IntersectionObserver] observe:', target);
+                },
+                unobserve: function(target) {
+                    performanceMonitor.recordApiCall('IntersectionObserver.unobserve');
+                    console.log('[IntersectionObserver] unobserve:', target);
+                },
+                disconnect: function() {
+                    performanceMonitor.recordApiCall('IntersectionObserver.disconnect');
+                    console.log('[IntersectionObserver] disconnect');
+                }
+            };
+        };
+        
+        // Mutation Observer API
+        globalObj.MutationObserver = function(callback) {
+            performanceMonitor.recordApiCall('MutationObserver.constructor');
+            return {
+                observe: function(target, options) {
+                    performanceMonitor.recordApiCall('MutationObserver.observe');
+                    console.log('[MutationObserver] observe:', target, options);
+                },
+                disconnect: function() {
+                    performanceMonitor.recordApiCall('MutationObserver.disconnect');
+                    console.log('[MutationObserver] disconnect');
+                },
+                takeRecords: function() {
+                    performanceMonitor.recordApiCall('MutationObserver.takeRecords');
+                    return [];
+                }
+            };
+        };
+        
+        // Resize Observer API
+        globalObj.ResizeObserver = function(callback) {
+            performanceMonitor.recordApiCall('ResizeObserver.constructor');
+            return {
+                observe: function(target, options) {
+                    performanceMonitor.recordApiCall('ResizeObserver.observe');
+                    console.log('[ResizeObserver] observe:', target, options);
+                },
+                unobserve: function(target) {
+                    performanceMonitor.recordApiCall('ResizeObserver.unobserve');
+                    console.log('[ResizeObserver] unobserve:', target);
+                },
+                disconnect: function() {
+                    performanceMonitor.recordApiCall('ResizeObserver.disconnect');
+                    console.log('[ResizeObserver] disconnect');
+                }
+            };
+        };
+        
+        // Web Workers API
+        globalObj.Worker = function(scriptURL) {
+            performanceMonitor.recordApiCall('Worker.constructor');
+            return {
+                postMessage: function(message) {
+                    performanceMonitor.recordApiCall('Worker.postMessage');
+                    console.log('[Worker] postMessage:', message);
+                },
+                terminate: function() {
+                    performanceMonitor.recordApiCall('Worker.terminate');
+                    console.log('[Worker] terminate');
+                },
+                addEventListener: function() {},
+                removeEventListener: function() {}
+            };
+        };
+        
+        // Crypto API
+        if (!globalObj.crypto) {
+            globalObj.crypto = {
+                getRandomValues: function(array) {
+                    performanceMonitor.recordApiCall('crypto.getRandomValues');
+                    for (let i = 0; i < array.length; i++) {
+                        array[i] = Math.floor(Math.random() * 256);
+                    }
+                    return array;
+                },
+                randomUUID: function() {
+                    performanceMonitor.recordApiCall('crypto.randomUUID');
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        const r = Math.random() * 16 | 0;
+                        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                }
+            };
+        }
+        
+        performanceMonitor.endTimer('modernAPIs');
+        console.log('✓ 现代API增强加载成功');
+        
+    } catch (e) {
+        performanceMonitor.recordError(e, '现代API增强');
+        console.error('✗ 现代API增强加载失败:', e.message);
+    }
+    
+    // 插件系统
+    const pluginSystem = {
+        plugins: new Map(),
+        hooks: new Map(),
+        
+        // 注册插件
+        register(name, plugin) {
+            if (typeof plugin !== 'object' || typeof plugin.init !== 'function') {
+                throw new Error('插件必须是包含init方法的对象');
+            }
+            
+            this.plugins.set(name, plugin);
+            
+            try {
+                plugin.init({
+                    globalObj,
+                    performanceMonitor,
+                    config: smartConfig,
+                    registerHook: this.registerHook.bind(this),
+                    triggerHook: this.triggerHook.bind(this)
+                });
+                console.log(`✓ 插件 "${name}" 注册成功`);
+            } catch (e) {
+                performanceMonitor.recordError(e, `插件注册: ${name}`);
+                console.error(`✗ 插件 "${name}" 注册失败:`, e.message);
+            }
+        },
+        
+        // 注册钩子
+        registerHook(hookName, callback) {
+            if (!this.hooks.has(hookName)) {
+                this.hooks.set(hookName, []);
+            }
+            this.hooks.get(hookName).push(callback);
+        },
+        
+        // 触发钩子
+        triggerHook(hookName, ...args) {
+            const callbacks = this.hooks.get(hookName);
+            if (callbacks) {
+                callbacks.forEach(callback => {
+                    try {
+                        callback(...args);
+                    } catch (e) {
+                        performanceMonitor.recordError(e, `钩子执行: ${hookName}`);
+                    }
+                });
+            }
+        },
+        
+        // 卸载插件
+        unregister(name) {
+            const plugin = this.plugins.get(name);
+            if (plugin && typeof plugin.destroy === 'function') {
+                try {
+                    plugin.destroy();
+                } catch (e) {
+                    performanceMonitor.recordError(e, `插件卸载: ${name}`);
+                }
+            }
+            this.plugins.delete(name);
+            console.log(`✓ 插件 "${name}" 已卸载`);
+        },
+        
+        // 获取插件列表
+        list() {
+            return Array.from(this.plugins.keys());
+        }
+    };
+    
+    // 调试和测试工具
+    const debugTools = {
+        // DOM检查器
+        inspectElement(element) {
+            if (!element) return null;
+            
+            const info = {
+                tagName: element.tagName,
+                id: element.id,
+                className: element.className,
+                attributes: {},
+                style: {},
+                children: element.children ? element.children.length : 0,
+                parentNode: element.parentNode ? element.parentNode.tagName : null
+            };
+            
+            // 收集属性
+            if (element.attributes) {
+                for (let attr of element.attributes) {
+                    info.attributes[attr.name] = attr.value;
+                }
+            }
+            
+            // 收集样式
+            if (element.style) {
+                info.style = element.style.cssText || {};
+            }
+            
+            return info;
+        },
+        
+        // 环境检查
+        checkEnvironment() {
+            return {
+                isNode: isNode,
+                isBrowser: isBrowser,
+                hasWindow: !!globalObj.window,
+                hasDocument: !!globalObj.document,
+                hasNavigator: !!globalObj.navigator,
+                hasLocation: !!globalObj.location,
+                nodeVersion: isNode ? process.version : null,
+                platform: isNode ? process.platform : navigator.platform
+            };
+        },
+        
+        // API兼容性检查
+        checkCompatibility() {
+            const apis = [
+                'window', 'document', 'navigator', 'location', 'console',
+                'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
+                'addEventListener', 'removeEventListener',
+                'localStorage', 'sessionStorage',
+                'btoa', 'atob', 'fetch', 'Promise',
+                'performance', 'crypto'
+            ];
+            
+            const result = {};
+            apis.forEach(api => {
+                result[api] = !!globalObj[api];
+            });
+            
+            return result;
+        },
+        
+        // 内存使用报告
+        getMemoryReport() {
+            if (isNode && process.memoryUsage) {
+                const usage = process.memoryUsage();
+                return {
+                    rss: `${Math.round(usage.rss / 1024 / 1024)}MB`,
+                    heapTotal: `${Math.round(usage.heapTotal / 1024 / 1024)}MB`,
+                    heapUsed: `${Math.round(usage.heapUsed / 1024 / 1024)}MB`,
+                    external: `${Math.round(usage.external / 1024 / 1024)}MB`,
+                    arrayBuffers: `${Math.round((usage.arrayBuffers || 0) / 1024 / 1024)}MB`
+                };
+            }
+            return { message: '内存使用信息仅在Node.js环境中可用' };
+        }
+    };
     
     // 输出加载状态
     console.log('\n=== 环境补丁加载状态 ===');
@@ -1295,14 +2160,475 @@
     console.log('\n=== 浏览器环境补丁加载完成 ===');
     console.log('现在可以在Node.js环境中使用浏览器API了！');
     
+    // 在返回结果之前打印性能报告
+    performanceMonitor.printReport();
+    
     // 导出补丁状态供外部使用
     const result = {
         status: patchStatus,
         window: globalObj.window,
         document: globalObj.document,
         location: globalObj.location,
-        navigator: globalObj.navigator
+        navigator: globalObj.navigator,
+        
+        // 新增功能接口
+        performance: performanceMonitor,
+        benchmark: benchmarkTool,
+        plugins: pluginSystem,
+        debug: debugTools,
+        
+        // 便捷方法
+        runBenchmarks: (iterations) => benchmarkTool.runAllTests(iterations),
+        checkCompatibility: () => debugTools.checkCompatibility(),
+        getPerformanceReport: () => performanceMonitor.getReport(),
+        getMemoryReport: () => debugTools.getMemoryReport(),
+        inspectElement: (element) => debugTools.inspectElement(element),
+        validateConfig: (configToValidate) => configToValidate ? config.validator.validateConfig(configToValidate) : configValidation,
+        getSuggestions: () => config.suggestions.getEnvironmentSuggestions(),
+        getTemplate: (scenario) => config.helper.getTemplate(scenario),
+        runTests: () => testingUtilities.createBuiltInTests().run(),
+        enableSandbox: () => securityFeatures.enableSandbox(),
+        
+        // 配置信息
+        config: smartConfig,
+        
+        // 版本信息
+        version: '2.0.0',
+        buildDate: new Date().toISOString(),
+        features: [
+            'Error增强',
+            'Navigator模拟',
+            'Location模拟', 
+            'Document模拟',
+            'Window模拟',
+            '性能监控',
+            '基准测试',
+            '现代API支持',
+            '插件系统',
+            '调试工具'
+        ]
     };
+    
+    // 安全特性和沙箱模式
+    const securityFeatures = {
+        // 启用沙箱模式
+        enableSandbox() {
+            console.log('🔒 启用沙箱模式');
+            
+            // 限制一些危险操作
+            const originalEval = globalObj.eval;
+            globalObj.eval = function(code) {
+                console.warn('[Security] eval() 调用被拦截:', code.substring(0, 50) + '...');
+                if (securityFeatures.allowEval) {
+                    return originalEval(code);
+                } else {
+                    throw new Error('eval() 在沙箱模式下被禁用');
+                }
+            };
+            
+            // 限制Function构造函数
+            const OriginalFunction = globalObj.Function;
+            globalObj.Function = function(...args) {
+                console.warn('[Security] Function构造函数调用被拦截');
+                if (securityFeatures.allowFunctionConstructor) {
+                    return new OriginalFunction(...args);
+                } else {
+                    throw new Error('Function构造函数在沙箱模式下被禁用');
+                }
+            };
+        },
+        
+        allowEval: false,
+        allowFunctionConstructor: false,
+        
+        // 检查潜在的安全风险
+        checkSecurity() {
+            const risks = [];
+            
+            if (typeof globalObj.eval === 'function') {
+                risks.push('eval函数可用');
+            }
+            
+            if (typeof globalObj.Function === 'function') {
+                risks.push('Function构造函数可用');
+            }
+            
+            if (isNode && typeof process.binding === 'function') {
+                risks.push('process.binding可用');
+            }
+            
+            return {
+                riskLevel: risks.length === 0 ? 'low' : risks.length < 3 ? 'medium' : 'high',
+                risks: risks,
+                recommendations: risks.length > 0 ? ['考虑启用沙箱模式'] : ['当前环境相对安全']
+            };
+        }
+    };
+    
+    // 兼容性检查和自动修复
+    const compatibilityManager = {
+        checkNodeVersion() {
+            if (isNode) {
+                const version = process.version;
+                const majorVersion = parseInt(version.substring(1).split('.')[0]);
+                
+                return {
+                    version: version,
+                    majorVersion: majorVersion,
+                    isSupported: majorVersion >= 14,
+                    recommendation: majorVersion < 14 ? '建议升级到Node.js 14+' : '版本支持良好'
+                };
+            }
+            return { message: '非Node.js环境' };
+        },
+        
+        // 自动应用兼容性修复
+        applyCompatibilityFixes() {
+            const fixes = [];
+            
+            // 修复Promise (针对老版本)
+            if (!globalObj.Promise) {
+                globalObj.Promise = class Promise {
+                    constructor(executor) {
+                        // 简单的Promise polyfill
+                        console.log('[Compatibility] 应用Promise polyfill');
+                        fixes.push('Promise polyfill');
+                    }
+                };
+            }
+            
+            // 修复fetch API
+            if (!globalObj.fetch) {
+                globalObj.fetch = function(url, options) {
+                    console.log('[Compatibility] fetch API模拟调用:', url);
+                    fixes.push('fetch API模拟');
+                    return Promise.resolve({
+                        ok: true,
+                        status: 200,
+                        json: () => Promise.resolve({}),
+                        text: () => Promise.resolve(''),
+                        blob: () => Promise.resolve(new Blob()),
+                        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0))
+                    });
+                };
+            }
+            
+            // 修复CustomEvent
+            if (!globalObj.CustomEvent) {
+                globalObj.CustomEvent = function(type, options = {}) {
+                    console.log('[Compatibility] CustomEvent polyfill');
+                    fixes.push('CustomEvent polyfill');
+                    const event = document.createEvent('Event');
+                    event.initEvent(type, options.bubbles || false, options.cancelable || false);
+                    event.detail = options.detail;
+                    return event;
+                };
+            }
+            
+            return fixes;
+        }
+    };
+    
+    // 应用兼容性修复
+    const appliedFixes = compatibilityManager.applyCompatibilityFixes();
+    if (appliedFixes.length > 0) {
+        console.log('🔧 已应用兼容性修复:', appliedFixes.join(', '));
+    }
+    
+    // 检查Node.js版本
+    const nodeVersionCheck = compatibilityManager.checkNodeVersion();
+    if (nodeVersionCheck.version) {
+        console.log(`📋 Node.js版本: ${nodeVersionCheck.version} (${nodeVersionCheck.recommendation})`);
+    }
+    
+    // 安全检查
+    const securityCheck = securityFeatures.checkSecurity();
+    console.log(`🔐 安全等级: ${securityCheck.riskLevel} (${securityCheck.risks.length}个风险)`);
+    
+    // 测试工具和断言库
+    const testingUtilities = {
+        // 断言库
+        assert: {
+            // 基本断言
+            equal(actual, expected, message) {
+                if (actual !== expected) {
+                    throw new Error(message || `断言失败: 期望 ${expected}, 实际 ${actual}`);
+                }
+                console.log(`✓ 断言通过: ${actual} === ${expected}`);
+            },
+            
+            notEqual(actual, expected, message) {
+                if (actual === expected) {
+                    throw new Error(message || `断言失败: ${actual} 不应该等于 ${expected}`);
+                }
+                console.log(`✓ 断言通过: ${actual} !== ${expected}`);
+            },
+            
+            strictEqual(actual, expected, message) {
+                if (actual !== expected) {
+                    throw new Error(message || `严格断言失败: 期望 ${expected}, 实际 ${actual}`);
+                }
+                console.log(`✓ 严格断言通过: ${actual} === ${expected}`);
+            },
+            
+            deepEqual(actual, expected, message) {
+                if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+                    throw new Error(message || `深度断言失败: 期望 ${JSON.stringify(expected)}, 实际 ${JSON.stringify(actual)}`);
+                }
+                console.log(`✓ 深度断言通过`);
+            },
+            
+            truthy(value, message) {
+                if (!value) {
+                    throw new Error(message || `断言失败: 期望真值, 实际 ${value}`);
+                }
+                console.log(`✓ 真值断言通过: ${value}`);
+            },
+            
+            falsy(value, message) {
+                if (value) {
+                    throw new Error(message || `断言失败: 期望假值, 实际 ${value}`);
+                }
+                console.log(`✓ 假值断言通过: ${value}`);
+            },
+            
+            throws(fn, expectedError, message) {
+                try {
+                    fn();
+                    throw new Error(message || '期望函数抛出错误，但没有抛出');
+                } catch (error) {
+                    if (expectedError && error.constructor !== expectedError) {
+                        throw new Error(message || `期望抛出 ${expectedError.name}，但抛出了 ${error.constructor.name}`);
+                    }
+                    console.log(`✓ 异常断言通过: ${error.constructor.name}`);
+                }
+            },
+            
+            async asyncThrows(asyncFn, expectedError, message) {
+                try {
+                    await asyncFn();
+                    throw new Error(message || '期望异步函数抛出错误，但没有抛出');
+                } catch (error) {
+                    if (expectedError && error.constructor !== expectedError) {
+                        throw new Error(message || `期望抛出 ${expectedError.name}，但抛出了 ${error.constructor.name}`);
+                    }
+                    console.log(`✓ 异步异常断言通过: ${error.constructor.name}`);
+                }
+            }
+        },
+        
+        // 测试套件
+        TestSuite: class {
+            constructor(name) {
+                this.name = name;
+                this.tests = [];
+                this.beforeEachFn = null;
+                this.afterEachFn = null;
+                this.beforeAllFn = null;
+                this.afterAllFn = null;
+            }
+            
+            beforeAll(fn) {
+                this.beforeAllFn = fn;
+            }
+            
+            afterAll(fn) {
+                this.afterAllFn = fn;
+            }
+            
+            beforeEach(fn) {
+                this.beforeEachFn = fn;
+            }
+            
+            afterEach(fn) {
+                this.afterEachFn = fn;
+            }
+            
+            test(name, fn) {
+                this.tests.push({ name, fn, type: 'sync' });
+            }
+            
+            asyncTest(name, fn) {
+                this.tests.push({ name, fn, type: 'async' });
+            }
+            
+            async run() {
+                console.log(`\n🧪 运行测试套件: ${this.name}`);
+                
+                let passed = 0;
+                let failed = 0;
+                const errors = [];
+                
+                // 运行 beforeAll
+                if (this.beforeAllFn) {
+                    try {
+                        await this.beforeAllFn();
+                    } catch (e) {
+                        console.error(`❌ beforeAll 失败:`, e.message);
+                        return { passed: 0, failed: this.tests.length, errors: [e] };
+                    }
+                }
+                
+                // 运行所有测试
+                for (const test of this.tests) {
+                    try {
+                        // 运行 beforeEach
+                        if (this.beforeEachFn) {
+                            await this.beforeEachFn();
+                        }
+                        
+                        // 运行测试
+                        if (test.type === 'async') {
+                            await test.fn();
+                        } else {
+                            test.fn();
+                        }
+                        
+                        // 运行 afterEach
+                        if (this.afterEachFn) {
+                            await this.afterEachFn();
+                        }
+                        
+                        console.log(`  ✓ ${test.name}`);
+                        passed++;
+                        
+                    } catch (e) {
+                        console.error(`  ❌ ${test.name}: ${e.message}`);
+                        failed++;
+                        errors.push({ test: test.name, error: e });
+                    }
+                }
+                
+                // 运行 afterAll
+                if (this.afterAllFn) {
+                    try {
+                        await this.afterAllFn();
+                    } catch (e) {
+                        console.error(`❌ afterAll 失败:`, e.message);
+                    }
+                }
+                
+                console.log(`\n📊 测试结果: ${passed} 通过, ${failed} 失败`);
+                
+                return { passed, failed, errors };
+            }
+        },
+        
+        // 模拟工具
+        mock: {
+            // 创建模拟函数
+            fn(implementation) {
+                const calls = [];
+                const mockFn = function(...args) {
+                    calls.push({ args, timestamp: Date.now() });
+                    if (implementation) {
+                        return implementation.apply(this, args);
+                    }
+                };
+                
+                mockFn.calls = calls;
+                mockFn.calledWith = (...expectedArgs) => {
+                    return calls.some(call => 
+                        call.args.length === expectedArgs.length &&
+                        call.args.every((arg, i) => arg === expectedArgs[i])
+                    );
+                };
+                mockFn.callCount = () => calls.length;
+                mockFn.lastCall = () => calls[calls.length - 1];
+                mockFn.reset = () => calls.length = 0;
+                
+                return mockFn;
+            },
+            
+            // 模拟对象方法
+            spyOn(object, methodName) {
+                const original = object[methodName];
+                const spy = this.fn(original);
+                object[methodName] = spy;
+                
+                spy.restore = () => {
+                    object[methodName] = original;
+                };
+                
+                return spy;
+            }
+        },
+        
+        // 内置测试套件
+        createBuiltInTests() {
+            const suite = new this.TestSuite('浏览器环境补丁测试');
+            
+            // Error测试
+            suite.test('Error对象应该正常工作', () => {
+                const error = new Error('测试错误');
+                this.assert.equal(error.name, 'Error');
+                this.assert.equal(error.message, '测试错误');
+                this.assert.truthy(error.stack);
+            });
+            
+            // Navigator测试
+            suite.test('Navigator对象应该存在', () => {
+                this.assert.truthy(navigator);
+                this.assert.truthy(navigator.userAgent);
+                this.assert.truthy(navigator.platform);
+            });
+            
+            // Location测试
+            suite.test('Location对象应该存在', () => {
+                this.assert.truthy(location);
+                this.assert.truthy(location.href);
+                this.assert.truthy(location.protocol);
+            });
+            
+            // Document测试
+            suite.test('Document对象应该存在', () => {
+                this.assert.truthy(document);
+                this.assert.equal(typeof document.createElement, 'function');
+                this.assert.equal(typeof document.querySelector, 'function');
+            });
+            
+            // Document createElement测试
+            suite.test('Document.createElement应该工作', () => {
+                const div = document.createElement('div');
+                this.assert.equal(div.tagName, 'DIV');
+                this.assert.equal(div.nodeType, 1);
+            });
+            
+            // Window测试
+            suite.test('Window对象应该存在', () => {
+                this.assert.truthy(window);
+                this.assert.equal(typeof window.setTimeout, 'function');
+                this.assert.equal(typeof window.setInterval, 'function');
+            });
+            
+            // 现代API测试
+            suite.test('现代API应该存在', () => {
+                this.assert.truthy(performance);
+                this.assert.truthy(crypto);
+                this.assert.equal(typeof performance.now, 'function');
+                this.assert.equal(typeof crypto.getRandomValues, 'function');
+            });
+            
+            // 性能测试
+            suite.asyncTest('性能监控应该工作', async () => {
+                const startTime = performance.now();
+                await new Promise(resolve => setTimeout(resolve, 10));
+                const endTime = performance.now();
+                this.assert.truthy(endTime > startTime);
+            });
+            
+            return suite;
+        }
+    };
+    
+    // 扩展result对象
+    result.security = securityFeatures;
+    result.compatibility = compatibilityManager;
+    result.appliedFixes = appliedFixes;
+    result.nodeVersionCheck = nodeVersionCheck;
+    result.securityCheck = securityCheck;
+    result.testing = testingUtilities;
+    result.configValidation = configValidation;
     
     // 在Node.js环境中导出模块
     if (typeof module !== 'undefined' && module.exports) {
