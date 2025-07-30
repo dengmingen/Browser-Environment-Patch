@@ -1153,27 +1153,153 @@ const smartConfig = config.getSmartConfig();
         console.log('正在加载Document补丁...');
         
         function createHTMLCollection(items = []) {
-            const collection = Array.from(items);
-            collection.length = items.length;
-            collection.item = function(index) { return this[index] || null; };
-            collection.namedItem = function(name) { 
-                return this.find(item => item.id === name || item.name === name) || null;
+            const collection = Object.create(HTMLCollection.prototype);
+            
+            // 将项目添加到集合中
+            items.forEach((item, index) => {
+                collection[index] = item;
+                // 如果元素有id或name，也可以通过名称访问
+                if (item.id) {
+                    collection[item.id] = item;
+                }
+                if (item.name && item.name !== item.id) {
+                    collection[item.name] = item;
+                }
+            });
+            
+            // 设置长度
+            Object.defineProperty(collection, 'length', {
+                value: items.length,
+                writable: false,
+                enumerable: false,
+                configurable: false
+            });
+            
+            // 实现标准方法
+            collection.item = function(index) { 
+                return (index >= 0 && index < this.length) ? this[index] : null; 
             };
-            collection[Symbol.iterator] = function() { return this[Symbol.iterator](); };
+            
+            collection.namedItem = function(name) { 
+                // 首先查找id匹配
+                for (let i = 0; i < this.length; i++) {
+                    if (this[i].id === name) return this[i];
+                }
+                // 然后查找name匹配
+                for (let i = 0; i < this.length; i++) {
+                    if (this[i].name === name) return this[i];
+                }
+                return null;
+            };
+            
+            // 实现迭代器
+            collection[Symbol.iterator] = function* () {
+                for (let i = 0; i < this.length; i++) {
+                    yield this[i];
+                }
+            };
+            
+            // 添加现代方法
+            collection.forEach = function(callback, thisArg) {
+                for (let i = 0; i < this.length; i++) {
+                    callback.call(thisArg, this[i], i, this);
+                }
+            };
+            
+            collection.entries = function* () {
+                for (let i = 0; i < this.length; i++) {
+                    yield [i, this[i]];
+                }
+            };
+            
+            collection.keys = function* () {
+                for (let i = 0; i < this.length; i++) {
+                    yield i;
+                }
+            };
+            
+            collection.values = function* () {
+                for (let i = 0; i < this.length; i++) {
+                    yield this[i];
+                }
+            };
+            
             return collection;
         }
         
+        // HTMLCollection构造函数
+        function HTMLCollection() {}
+        HTMLCollection.prototype = {
+            constructor: HTMLCollection,
+            item: function(index) { return null; },
+            namedItem: function(name) { return null; }
+        };
+        
         function createNodeList(items = []) {
-            const list = Array.from(items);
-            list.length = items.length;
-            list.item = function(index) { return this[index] || null; };
-            list.entries = function() { return this.entries(); };
-            list.forEach = function(callback, thisArg) { return this.forEach(callback, thisArg); };
-            list.keys = function() { return this.keys(); };
-            list.values = function() { return this.values(); };
-            list[Symbol.iterator] = function() { return this[Symbol.iterator](); };
+            const list = Object.create(NodeList.prototype);
+            
+            // 将项目添加到列表中
+            items.forEach((item, index) => {
+                list[index] = item;
+            });
+            
+            // 设置长度
+            Object.defineProperty(list, 'length', {
+                value: items.length,
+                writable: false,
+                enumerable: false,
+                configurable: false
+            });
+            
+            // 实现标准方法
+            list.item = function(index) { 
+                return (index >= 0 && index < this.length) ? this[index] : null; 
+            };
+            
+            // 实现迭代器方法
+            list.entries = function* () {
+                for (let i = 0; i < this.length; i++) {
+                    yield [i, this[i]];
+                }
+            };
+            
+            list.forEach = function(callback, thisArg) {
+                for (let i = 0; i < this.length; i++) {
+                    callback.call(thisArg, this[i], i, this);
+                }
+            };
+            
+            list.keys = function* () {
+                for (let i = 0; i < this.length; i++) {
+                    yield i;
+                }
+            };
+            
+            list.values = function* () {
+                for (let i = 0; i < this.length; i++) {
+                    yield this[i];
+                }
+            };
+            
+            list[Symbol.iterator] = function* () {
+                for (let i = 0; i < this.length; i++) {
+                    yield this[i];
+                }
+            };
+            
             return list;
         }
+        
+        // NodeList构造函数
+        function NodeList() {}
+        NodeList.prototype = {
+            constructor: NodeList,
+            item: function(index) { return null; },
+            forEach: function(callback, thisArg) {},
+            entries: function* () {},
+            keys: function* () {},
+            values: function* () {}
+        };
         
         function createElement(tagName) {
             const element = {
@@ -1231,25 +1357,11 @@ const smartConfig = config.getSmartConfig();
                 offsetWidth: 0,
                 offsetHeight: 0,
                 offsetParent: null,
-                classList: {
-                    add: function(...tokens) {
-                        console.log('[Element] classList.add:', tokens);
-                    },
-                    remove: function(...tokens) {
-                        console.log('[Element] classList.remove:', tokens);
-                    },
-                    toggle: function(token, force) {
-                        console.log('[Element] classList.toggle:', token, force);
-                        return false;
-                    },
-                    contains: function(token) {
-                        console.log('[Element] classList.contains:', token);
-                        return false;
-                    },
-                    replace: function(oldToken, newToken) {
-                        console.log('[Element] classList.replace:', oldToken, newToken);
-                    },
-                    length: 0
+                get classList() {
+                    if (!this._classList) {
+                        this._classList = new globalObj.DOMTokenList(this, 'className');
+                    }
+                    return this._classList;
                 },
                 style: {
                     cssText: '',
@@ -1664,6 +1776,100 @@ const smartConfig = config.getSmartConfig();
             get anchors() { return createHTMLCollection([]); },
             get applets() { return createHTMLCollection([]); },
             get all() { return createHTMLCollection([]); },
+            
+            // 现代集合和属性
+            get fonts() {
+                return {
+                    ready: Promise.resolve(),
+                    status: 'loaded',
+                    add: function(fontFace) {
+                        console.log('[Document.fonts] add:', fontFace);
+                    },
+                    delete: function(fontFace) {
+                        console.log('[Document.fonts] delete:', fontFace);
+                        return false;
+                    },
+                    has: function(fontFace) {
+                        console.log('[Document.fonts] has:', fontFace);
+                        return false;
+                    },
+                    clear: function() {
+                        console.log('[Document.fonts] clear');
+                    },
+                    load: function(font, text) {
+                        console.log('[Document.fonts] load:', font, text);
+                        return Promise.resolve([]);
+                    },
+                    check: function(font, text) {
+                        console.log('[Document.fonts] check:', font, text);
+                        return true;
+                    },
+                    addEventListener: function() {},
+                    removeEventListener: function() {}
+                };
+            },
+            
+            // DOM实现信息
+            get implementation() {
+                return {
+                    createDocument: function(namespaceURI, qualifiedName, doctype) {
+                        performanceMonitor.recordApiCall('DOMImplementation.createDocument');
+                        console.log('[DOMImplementation] createDocument:', namespaceURI, qualifiedName);
+                        return document;
+                    },
+                    createDocumentType: function(qualifiedName, publicId, systemId) {
+                        performanceMonitor.recordApiCall('DOMImplementation.createDocumentType');
+                        console.log('[DOMImplementation] createDocumentType:', qualifiedName, publicId, systemId);
+                        return {
+                            name: qualifiedName,
+                            publicId: publicId || '',
+                            systemId: systemId || '',
+                            nodeType: 10 // DOCUMENT_TYPE_NODE
+                        };
+                    },
+                    createHTMLDocument: function(title) {
+                        performanceMonitor.recordApiCall('DOMImplementation.createHTMLDocument');
+                        console.log('[DOMImplementation] createHTMLDocument:', title);
+                        const newDoc = Object.create(document);
+                        if (title) newDoc.title = title;
+                        return newDoc;
+                    },
+                    hasFeature: function(feature, version) {
+                        console.log('[DOMImplementation] hasFeature:', feature, version);
+                        return true; // 简化实现，总是返回true
+                    }
+                };
+            },
+            
+            // 动画时间线
+            get timeline() {
+                return {
+                    currentTime: Date.now(),
+                    play: function() {
+                        console.log('[DocumentTimeline] play');
+                    },
+                    pause: function() {
+                        console.log('[DocumentTimeline] pause');
+                    }
+                };
+            },
+            
+            // 选择相关
+            get caretPositionFromPoint() {
+                return function(x, y) {
+                    performanceMonitor.recordApiCall('document.caretPositionFromPoint');
+                    console.log('[Document] caretPositionFromPoint:', x, y);
+                    return null;
+                };
+            },
+            
+            get caretRangeFromPoint() {
+                return function(x, y) {
+                    performanceMonitor.recordApiCall('document.caretRangeFromPoint');
+                    console.log('[Document] caretRangeFromPoint:', x, y);
+                    return null;
+                };
+            },
             
             // DOM查询方法
             getElementById: function(id) {
@@ -2126,7 +2332,365 @@ const smartConfig = config.getSmartConfig();
             queryCommandValue: function(commandId) {
                 console.log('[Document] queryCommandValue:', commandId);
                 return '';
-            }
+            },
+            
+            // 现代选择API
+            getSelection: function() {
+                performanceMonitor.recordApiCall('document.getSelection');
+                return {
+                    anchorNode: null,
+                    anchorOffset: 0,
+                    focusNode: null,
+                    focusOffset: 0,
+                    isCollapsed: true,
+                    rangeCount: 0,
+                    type: 'None',
+                    addRange: function(range) {
+                        console.log('[Selection] addRange:', range);
+                    },
+                    removeAllRanges: function() {
+                        console.log('[Selection] removeAllRanges');
+                    },
+                    removeRange: function(range) {
+                        console.log('[Selection] removeRange:', range);
+                    },
+                    getRangeAt: function(index) {
+                        console.log('[Selection] getRangeAt:', index);
+                        return document.createRange();
+                    },
+                    selectAllChildren: function(node) {
+                        console.log('[Selection] selectAllChildren:', node);
+                    },
+                    setBaseAndExtent: function(anchorNode, anchorOffset, focusNode, focusOffset) {
+                        console.log('[Selection] setBaseAndExtent:', anchorNode, anchorOffset, focusNode, focusOffset);
+                    },
+                    collapse: function(node, offset) {
+                        console.log('[Selection] collapse:', node, offset);
+                    },
+                    collapseToStart: function() {
+                        console.log('[Selection] collapseToStart');
+                    },
+                    collapseToEnd: function() {
+                        console.log('[Selection] collapseToEnd');
+                    },
+                    extend: function(node, offset) {
+                        console.log('[Selection] extend:', node, offset);
+                    },
+                    containsNode: function(node, allowPartialContainment) {
+                        console.log('[Selection] containsNode:', node, allowPartialContainment);
+                        return false;
+                    },
+                    toString: function() {
+                        return '';
+                    }
+                };
+            },
+            
+            // 样式相关
+            get adoptedStyleSheets() {
+                return [];
+            },
+            set adoptedStyleSheets(sheets) {
+                console.log('[Document] adoptedStyleSheets set:', sheets);
+            },
+            
+            // 元数据相关
+            get dir() {
+                return this.documentElement.dir || '';
+            },
+            set dir(value) {
+                console.log('[Document] dir set to:', value);
+                this.documentElement.dir = value;
+            },
+            
+            get lang() {
+                return this.documentElement.lang || '';
+            },
+            set lang(value) {
+                console.log('[Document] lang set to:', value);
+                this.documentElement.lang = value;
+            },
+            
+            // 脚本相关
+            get currentScript() {
+                return null; // 在非浏览器环境中通常为null
+            },
+            
+            // 焦点管理
+            get hasFocus() {
+                return function() {
+                    performanceMonitor.recordApiCall('document.hasFocus');
+                    return true; // 简化实现
+                };
+            },
+            
+            // 网络状态
+            get onLine() {
+                return navigator.onLine;
+            },
+            
+            // 页面可见性扩展
+            get webkitVisibilityState() {
+                return this.visibilityState;
+            },
+            get webkitHidden() {
+                return this.hidden;
+            },
+            get mozVisibilityState() {
+                return this.visibilityState;
+            },
+            get mozHidden() {
+                return this.hidden;
+            },
+            get msVisibilityState() {
+                return this.visibilityState;
+            },
+            get msHidden() {
+                return this.hidden;
+            },
+            
+            // 触摸事件支持
+            createTouch: function(view, target, identifier, pageX, pageY, screenX, screenY) {
+                performanceMonitor.recordApiCall('document.createTouch');
+                console.log('[Document] createTouch:', identifier, pageX, pageY);
+                return {
+                    identifier: identifier,
+                    target: target,
+                    screenX: screenX || 0,
+                    screenY: screenY || 0,
+                    clientX: pageX || 0,
+                    clientY: pageY || 0,
+                    pageX: pageX || 0,
+                    pageY: pageY || 0,
+                    radiusX: 0,
+                    radiusY: 0,
+                    rotationAngle: 0,
+                    force: 1
+                };
+            },
+            
+            createTouchList: function(...touches) {
+                performanceMonitor.recordApiCall('document.createTouchList');
+                console.log('[Document] createTouchList:', touches.length);
+                const touchList = Array.from(touches);
+                touchList.item = function(index) { return this[index] || null; };
+                touchList.identifiedTouch = function(identifier) {
+                    return this.find(touch => touch.identifier === identifier) || null;
+                };
+                return touchList;
+            },
+            
+            // 新的DOM方法
+            prepend: function(...nodes) {
+                performanceMonitor.recordApiCall('document.prepend');
+                console.log('[Document] prepend:', nodes.length);
+                nodes.forEach(node => {
+                    if (typeof node === 'string') {
+                        node = this.createTextNode(node);
+                    }
+                    this.documentElement.insertBefore(node, this.documentElement.firstChild);
+                });
+            },
+            
+            append: function(...nodes) {
+                performanceMonitor.recordApiCall('document.append');
+                console.log('[Document] append:', nodes.length);
+                nodes.forEach(node => {
+                    if (typeof node === 'string') {
+                        node = this.createTextNode(node);
+                    }
+                    this.documentElement.appendChild(node);
+                });
+            },
+            
+            replaceChildren: function(...nodes) {
+                performanceMonitor.recordApiCall('document.replaceChildren');
+                console.log('[Document] replaceChildren:', nodes.length);
+                // 清空现有子节点
+                while (this.documentElement.firstChild) {
+                    this.documentElement.removeChild(this.documentElement.firstChild);
+                }
+                // 添加新节点
+                this.append(...nodes);
+            },
+            
+            // 自定义元素支持（基础）
+            get customElements() {
+                return {
+                    define: function(name, constructor, options) {
+                        performanceMonitor.recordApiCall('customElements.define');
+                        console.log('[CustomElements] define:', name, constructor.name);
+                    },
+                    get: function(name) {
+                        console.log('[CustomElements] get:', name);
+                        return undefined;
+                    },
+                    whenDefined: function(name) {
+                        console.log('[CustomElements] whenDefined:', name);
+                        return Promise.resolve();
+                    },
+                    upgrade: function(root) {
+                        console.log('[CustomElements] upgrade:', root);
+                    }
+                };
+            },
+            
+            // 权限API
+            get permissions() {
+                return {
+                    query: function(permissionDescriptor) {
+                        performanceMonitor.recordApiCall('permissions.query');
+                        console.log('[Permissions] query:', permissionDescriptor);
+                        return Promise.resolve({
+                            state: 'granted',
+                            onchange: null
+                        });
+                    }
+                };
+            },
+            
+            // Web组件相关
+            get webkitCurrentFullScreenElement() {
+                return this.fullscreenElement;
+            },
+            get mozFullScreenElement() {
+                return this.fullscreenElement;
+            },
+            get msFullscreenElement() {
+                return this.fullscreenElement;
+            },
+            
+            webkitExitFullscreen: function() {
+                return this.exitFullscreen();
+            },
+            mozCancelFullScreen: function() {
+                return this.exitFullscreen();
+            },
+            msExitFullscreen: function() {
+                return this.exitFullscreen();
+            },
+            
+            // 事件处理属性
+            onabort: null,
+            onanimationcancel: null,
+            onanimationend: null,
+            onanimationiteration: null,
+            onanimationstart: null,
+            onauxclick: null,
+            onblur: null,
+            oncanplay: null,
+            oncanplaythrough: null,
+            onchange: null,
+            onclick: null,
+            onclose: null,
+            oncontextmenu: null,
+            oncopy: null,
+            oncuechange: null,
+            oncut: null,
+            ondblclick: null,
+            ondrag: null,
+            ondragend: null,
+            ondragenter: null,
+            ondragexit: null,
+            ondragleave: null,
+            ondragover: null,
+            ondragstart: null,
+            ondrop: null,
+            ondurationchange: null,
+            onemptied: null,
+            onended: null,
+            onerror: null,
+            onfocus: null,
+            onfocusin: null,
+            onfocusout: null,
+            onformdata: null,
+            onfullscreenchange: null,
+            onfullscreenerror: null,
+            ongotpointercapture: null,
+            oninput: null,
+            oninvalid: null,
+            onkeydown: null,
+            onkeypress: null,
+            onkeyup: null,
+            onload: null,
+            onloadeddata: null,
+            onloadedmetadata: null,
+            onloadstart: null,
+            onlostpointercapture: null,
+            onmousedown: null,
+            onmouseenter: null,
+            onmouseleave: null,
+            onmousemove: null,
+            onmouseout: null,
+            onmouseover: null,
+            onmouseup: null,
+            onpaste: null,
+            onpause: null,
+            onplay: null,
+            onplaying: null,
+            onpointercancel: null,
+            onpointerdown: null,
+            onpointerenter: null,
+            onpointerleave: null,
+            onpointerlockchange: null,
+            onpointerlockerror: null,
+            onpointermove: null,
+            onpointerout: null,
+            onpointerover: null,
+            onpointerup: null,
+            onprogress: null,
+            onratechange: null,
+            onreset: null,
+            onresize: null,
+            onscroll: null,
+            onsecuritypolicyviolation: null,
+            onseeked: null,
+            onseeking: null,
+            onselect: null,
+            onselectionchange: null,
+            onselectstart: null,
+            onslotchange: null,
+            onstalled: null,
+            onsubmit: null,
+            onsuspend: null,
+            ontimeupdate: null,
+            ontoggle: null,
+            ontouchcancel: null,
+            ontouchend: null,
+            ontouchmove: null,
+            ontouchstart: null,
+            ontransitioncancel: null,
+            ontransitionend: null,
+            ontransitionrun: null,
+            ontransitionstart: null,
+            onvisibilitychange: null,
+            onvolumechange: null,
+            onwaiting: null,
+            onwebkitanimationend: null,
+            onwebkitanimationiteration: null,
+            onwebkitanimationstart: null,
+            onwebkittransitionend: null,
+            onwheel: null,
+            
+            // 文档状态相关事件
+            onDOMContentLoaded: null,
+            onreadystatechange: null,
+            
+            // 拖放相关增强
+            ondraggesture: null,
+            
+            // 触摸事件增强
+            ontouchforcechange: null,
+            
+            // 指针事件增强  
+            ongotpointercapture: null,
+            onlostpointercapture: null,
+            
+            // 现代事件
+            onbeforeinput: null,
+            oncompositionend: null,
+            oncompositionstart: null,
+            oncompositionupdate: null
         };
         
                         // 设置循环引用和关系 - 这里不能使用 globalObj.window，因为还没创建
@@ -2151,6 +2715,148 @@ const smartConfig = config.getSmartConfig();
         // 将head和body添加到documentElement
         document.documentElement.appendChild(document.head);
         document.documentElement.appendChild(document.body);
+        
+        // 设置全局构造函数
+        globalObj.HTMLCollection = HTMLCollection;
+        globalObj.NodeList = NodeList;
+        
+        // 添加DOMStringList构造函数
+        globalObj.DOMStringList = function DOMStringList(items = []) {
+            const list = Object.create(DOMStringList.prototype);
+            items.forEach((item, index) => {
+                list[index] = item;
+            });
+            
+            Object.defineProperty(list, 'length', {
+                value: items.length,
+                writable: false,
+                enumerable: false,
+                configurable: false
+            });
+            
+            list.item = function(index) {
+                return (index >= 0 && index < this.length) ? this[index] : null;
+            };
+            
+            list.contains = function(string) {
+                for (let i = 0; i < this.length; i++) {
+                    if (this[i] === string) return true;
+                }
+                return false;
+            };
+            
+            list[Symbol.iterator] = function* () {
+                for (let i = 0; i < this.length; i++) {
+                    yield this[i];
+                }
+            };
+            
+            return list;
+        };
+        
+        globalObj.DOMStringList.prototype = {
+            constructor: globalObj.DOMStringList,
+            item: function(index) { return null; },
+            contains: function(string) { return false; }
+        };
+        
+        // 添加DOMTokenList构造函数（用于classList等）
+        globalObj.DOMTokenList = function DOMTokenList(element, attribute) {
+            const list = Object.create(DOMTokenList.prototype);
+            list._element = element;
+            list._attribute = attribute;
+            list._tokens = [];
+            
+            Object.defineProperty(list, 'length', {
+                get: function() { return this._tokens.length; },
+                enumerable: false,
+                configurable: false
+            });
+            
+            list.item = function(index) {
+                return (index >= 0 && index < this.length) ? this._tokens[index] : null;
+            };
+            
+            list.contains = function(token) {
+                return this._tokens.includes(token);
+            };
+            
+            list.add = function(...tokens) {
+                tokens.forEach(token => {
+                    if (!this._tokens.includes(token)) {
+                        this._tokens.push(token);
+                    }
+                });
+                this._updateAttribute();
+            };
+            
+            list.remove = function(...tokens) {
+                tokens.forEach(token => {
+                    const index = this._tokens.indexOf(token);
+                    if (index !== -1) {
+                        this._tokens.splice(index, 1);
+                    }
+                });
+                this._updateAttribute();
+            };
+            
+            list.toggle = function(token, force) {
+                if (force === true) {
+                    this.add(token);
+                    return true;
+                } else if (force === false) {
+                    this.remove(token);
+                    return false;
+                } else {
+                    if (this.contains(token)) {
+                        this.remove(token);
+                        return false;
+                    } else {
+                        this.add(token);
+                        return true;
+                    }
+                }
+            };
+            
+            list.replace = function(oldToken, newToken) {
+                const index = this._tokens.indexOf(oldToken);
+                if (index !== -1) {
+                    this._tokens[index] = newToken;
+                    this._updateAttribute();
+                    return true;
+                }
+                return false;
+            };
+            
+            list.supports = function(token) {
+                return true; // 简化实现
+            };
+            
+            list._updateAttribute = function() {
+                if (this._element && this._attribute) {
+                    this._element[this._attribute] = this._tokens.join(' ');
+                }
+            };
+            
+            list[Symbol.iterator] = function* () {
+                for (let i = 0; i < this.length; i++) {
+                    yield this._tokens[i];
+                }
+            };
+            
+            return list;
+        };
+        
+        globalObj.DOMTokenList.prototype = {
+            constructor: globalObj.DOMTokenList,
+            item: function(index) { return null; },
+            contains: function(token) { return false; },
+            add: function(...tokens) {},
+            remove: function(...tokens) {},
+            toggle: function(token, force) { return false; },
+            replace: function(oldToken, newToken) { return false; },
+            supports: function(token) { return true; }
+        };
         
         // 设置到全局对象
         globalObj.document = document;
