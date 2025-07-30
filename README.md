@@ -41,6 +41,18 @@
    - 编码解码（btoa, atob）
    - 历史记录管理
    - 事件处理
+   - 消息传递（postMessage）
+   - 窗口控制（移动、调整大小）
+   - 现代Web API（Fetch, URL, WebGL等）
+
+6. **增强功能 (v2.0+)**
+   - 📊 **性能监控**: 实时性能追踪和分析
+   - 🧪 **测试工具**: 内置测试框架和断言库
+   - 🔌 **插件系统**: 动态插件加载和管理
+   - 🔧 **调试工具**: 元素检查器、环境检查
+   - ✅ **配置验证**: 智能配置验证和建议
+   - 🔒 **安全特性**: 沙箱模式和风险检测
+   - 🔄 **兼容性管理**: 自动兼容性检查
 
 ## 安装和使用
 
@@ -267,18 +279,45 @@ window.history.forward()    // 前进
 window.history.go(delta)    // 跳转
 ```
 
+## 📖 文档
+
+我们提供了完整的文档来帮助您更好地使用和贡献这个项目：
+
+### 核心文档
+- **[API 参考文档](docs/API-REFERENCE.md)** - 完整的API文档和使用说明
+- **[教程指南](docs/TUTORIALS.md)** - 分步教程和实际应用场景
+- **[故障排除指南](docs/TROUBLESHOOTING.md)** - 常见问题解决方案
+
+### 开发文档
+- **[贡献指南](docs/CONTRIBUTING.md)** - 如何参与项目开发
+- **[更新日志](CHANGELOG.md)** - 版本历史和变更记录
+
+### 快速链接
+- [快速开始教程](docs/TUTORIALS.md#快速开始)
+- [API兼容性检查](docs/API-REFERENCE.md#兼容性)
+- [性能优化指南](docs/TUTORIALS.md#性能优化)
+- [错误诊断方法](docs/TROUBLESHOOTING.md#调试技巧)
+
 ## 测试
 
 运行测试文件来验证所有功能：
 
 ```bash
-node test_main.js
-```
-
-运行示例文件查看使用示例：
-
-```bash
+# 运行基础测试
 node example.js
+
+# 运行增强功能演示
+node enhanced_demo.js
+
+# 运行完整测试套件
+node enhanced_features_test.js
+
+# 运行性能基准测试
+const browserPatch = require('./main.js');
+browserPatch.runBenchmarks(1000);
+
+# 获取详细性能报告
+console.log(browserPatch.getPerformanceReport());
 ```
 
 ## 注意事项
@@ -287,6 +326,8 @@ node example.js
 2. **性能考虑**: 在性能敏感的场景中，建议只加载需要的补丁
 3. **兼容性**: 主要针对现代浏览器API，某些过时的API可能不支持
 4. **Node.js版本**: 建议使用Node.js 14+版本
+5. **生产使用**: 建议在生产环境使用前进行充分测试
+6. **内存管理**: 长期运行的应用建议定期清理资源
 
 ## 文件结构
 
