@@ -725,6 +725,252 @@ browserPatch.enableSandbox();
 ---
 
 **升级建议**: 建议所有用户升级到 v2.0.0，享受更强大的功能和更好的开发体验！
+# DOM工具使用说明
+
+## 概述
+
+修改后的 `main.js` 文件现在可以在浏览器环境中运行，并提供丰富的DOM操作工具。当在HTML文件中引入时，它会自动检测浏览器环境并使用真实的DOM API。
+
+## 功能特性
+
+### 1. 自动环境检测
+- 在浏览器环境中使用真实的DOM API
+- 在Node.js环境中使用模拟的浏览器API
+- 自动加载DOM工具和便捷函数
+
+### 2. 便捷选择器
+```javascript
+// 基本选择器
+const element = $('selector');           // 等同于 document.querySelector
+const elements = $$('selector');         // 等同于 document.querySelectorAll
+const element = $id('elementId');        // 等同于 document.getElementById
+const elements = $class('className');    // 等同于 document.getElementsByClassName
+const elements = $tag('tagName');        // 等同于 document.getElementsByTagName
+const elements = $attr('attributeName'); // 查找具有特定属性的元素
+```
+
+### 3. DOM工具函数 (window.domUtils)
+
+#### 属性操作
+```javascript
+// 获取所有属性
+const attrs = domUtils.getAllAttributes(element);
+
+// 获取/设置特定属性
+const value = domUtils.getAttribute(element, 'attributeName');
+domUtils.setAttribute(element, 'name', 'value');
+
+// 检查属性存在
+const hasAttr = domUtils.hasAttribute(element, 'attributeName');
+
+// 移除属性
+domUtils.removeAttribute(element, 'attributeName');
+
+// 获取所有属性名
+const attrNames = domUtils.getAttributeNames(element);
+```
+
+#### 类名操作
+```javascript
+// 添加/移除/切换类名
+domUtils.addClass(element, 'className');
+domUtils.removeClass(element, 'className');
+domUtils.toggleClass(element, 'className');
+
+// 检查类名
+const hasClass = domUtils.hasClass(element, 'className');
+```
+
+#### 样式操作
+```javascript
+// 获取计算样式
+const styles = domUtils.getComputedStyles(element);
+
+// 获取/设置特定样式
+const value = domUtils.getStyleValue(element, 'property');
+domUtils.setStyle(element, 'property', 'value');
+
+// 获取元素尺寸和位置
+const size = domUtils.getElementSize(element);
+const position = domUtils.getElementPosition(element);
+```
+
+#### 元素关系
+```javascript
+// 获取父元素
+const parent = domUtils.getParentElement(element);
+
+// 获取子元素
+const children = domUtils.getChildElements(element);
+const childNodes = domUtils.getChildNodes(element);
+
+// 获取兄弟元素
+const siblings = domUtils.getSiblingElements(element);
+
+// 获取祖先元素
+const ancestors = domUtils.getAncestorElements(element);
+
+// 检查包含关系
+const contains = domUtils.containsElement(parent, child);
+```
+
+#### 元素信息
+```javascript
+// 基本信息
+const tagName = domUtils.getTagName(element);
+const nodeType = domUtils.getNodeType(element);
+
+// 内容信息
+const textContent = domUtils.getTextContent(element);
+const innerHTML = domUtils.getInnerHTML(element);
+const outerHTML = domUtils.getOuterHTML(element);
+
+// 可见性检查
+const isVisible = domUtils.isElementVisible(element);
+const isInViewport = domUtils.isInViewport(element);
+
+// 焦点状态
+const hasFocus = domUtils.hasFocus(element);
+```
+
+#### 事件处理
+```javascript
+// 添加/移除事件监听器
+domUtils.addEventListener(element, 'click', handler);
+domUtils.removeEventListener(element, 'click', handler);
+
+// 触发事件
+domUtils.dispatchEvent(element, event);
+
+// 创建自定义事件
+const event = domUtils.createEvent('customEvent', { detail: data });
+```
+
+#### 元素创建
+```javascript
+// 创建元素
+const element = domUtils.createElement('div', { id: 'new', class: 'test' });
+
+// 创建文本节点
+const textNode = domUtils.createTextNode('文本内容');
+```
+
+### 4. 调试工具
+
+```javascript
+// 调试元素信息（输出到控制台）
+debugElement(element);
+```
+
+## 使用示例
+
+### 基本用法
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DOM工具示例</title>
+</head>
+<body>
+    <div id="test" class="container" data-type="example">
+        <h1>标题</h1>
+        <p>段落内容</p>
+    </div>
+
+    <script src="main.js"></script>
+    <script>
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取元素
+            const element = $id('test');
+            
+            // 获取属性
+            const attrs = domUtils.getAllAttributes(element);
+            console.log('所有属性:', attrs);
+            
+            // 获取类名
+            const hasClass = domUtils.hasClass(element, 'container');
+            console.log('是否有container类:', hasClass);
+            
+            // 获取样式
+            const styles = domUtils.getComputedStyles(element);
+            console.log('计算样式:', styles);
+            
+            // 调试元素
+            debugElement(element);
+        });
+    </script>
+</body>
+</html>
+```
+
+### 高级用法
+
+```javascript
+// 查找所有具有特定属性的元素
+const elements = $attr('data-type');
+
+// 获取元素的完整信息
+const element = $id('myElement');
+const info = {
+    tagName: domUtils.getTagName(element),
+    attributes: domUtils.getAllAttributes(element),
+    classes: element.className.split(' '),
+    styles: domUtils.getComputedStyles(element),
+    position: domUtils.getElementPosition(element),
+    size: domUtils.getElementSize(element),
+    children: domUtils.getChildElements(element),
+    parent: domUtils.getParentElement(element)
+};
+
+// 动态创建和操作元素
+const newElement = domUtils.createElement('div', {
+    id: 'dynamic',
+    class: 'dynamic-element',
+    'data-created': 'true'
+});
+
+domUtils.addClass(newElement, 'highlight');
+domUtils.setStyle(newElement, 'background-color', 'yellow');
+document.body.appendChild(newElement);
+```
+
+## 注意事项
+
+1. **环境检测**: 脚本会自动检测运行环境，在浏览器中使用真实DOM API，在Node.js中使用模拟API。
+
+2. **兼容性**: 所有工具函数都包含错误检查，确保在元素不存在时不会报错。
+
+3. **性能**: 在浏览器环境中，工具函数直接调用原生DOM API，性能良好。
+
+4. **调试**: 使用 `debugElement()` 函数可以快速查看元素的详细信息。
+
+## 文件结构
+
+```
+├── main.js          # 主要的DOM工具文件
+├── example.html     # 完整的使用示例
+└── README.md        # 使用说明文档
+```
+
+## 运行示例
+
+1. 将 `main.js` 和 `example.html` 放在同一目录下
+2. 在浏览器中打开 `example.html`
+3. 点击各个测试按钮查看DOM工具的功能
+4. 打开浏览器控制台查看详细的调试信息
+
+## 扩展功能
+
+如果需要添加更多功能，可以在 `window.domUtils` 对象中添加新的方法，或者使用提供的扩展机制：
+
+```javascript
+// 添加自定义工具函数
+window.domUtils.myCustomFunction = function(element) {
+    // 自定义逻辑
+};
+```
 ## 贡献
 
 欢迎提交Issue和Pull Request来改进这个项目。
