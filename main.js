@@ -1,128 +1,168 @@
-// 浏览器环境补丁主入口文件
+// 浏览器环境补丁主入口文件 - 性能优化版本
 // 整合所有环境补丁，提供完整的浏览器API模拟
 
 (function() {
     'use strict';
     
-    console.log('=== 浏览器环境补丁主入口已加载 ===');
+    // 性能优化：延迟初始化控制台输出
+    const shouldLog = process?.env?.NODE_ENV !== 'production';
+    if (shouldLog) {
+        console.log('=== 浏览器环境补丁主入口已加载 ===');
+    }
     
-    // 智能环境检测和配置
+    // 智能环境检测和配置 - 性能优化版本
     const isNode = typeof global !== 'undefined' && typeof process !== 'undefined';
     const isBrowser = typeof globalThis !== 'undefined' && typeof globalThis.window !== 'undefined';
     const globalObj = isNode ? global : (isBrowser ? globalThis.window : this);
     
-    // 性能监控系统
+    // 性能优化：缓存常用对象
+    const Object_prototype_toString = Object.prototype.toString;
+    const Array_prototype_slice = Array.prototype.slice;
+    const String_prototype_split = String.prototype.split;
+    const Date_now = Date.now;
+    const Math_floor = Math.floor;
+    const Math_random = Math.random;
+    
+    // 性能监控系统 - 优化版本
     const performanceMonitor = {
-        startTime: Date.now(),
+        startTime: Date_now(),
         metrics: {
-            patchLoadTime: {},
-            apiCallCounts: {},
-            memoryUsage: {},
+            patchLoadTime: new Map(), // 使用 Map 提升性能
+            apiCallCounts: new Map(), // 使用 Map 提升性能
+            memoryUsage: null,
             errors: []
         },
         
-        // 开始计时
+        // 性能优化：使用 Map 缓存计时器
+        _timers: new Map(),
+        
+        // 开始计时 - 优化版本
         startTimer(name) {
-            this.metrics.patchLoadTime[name] = Date.now();
+            this._timers.set(name, Date_now());
         },
         
-        // 结束计时
+        // 结束计时 - 优化版本
         endTimer(name) {
-            if (this.metrics.patchLoadTime[name]) {
-                this.metrics.patchLoadTime[name] = Date.now() - this.metrics.patchLoadTime[name];
+            const startTime = this._timers.get(name);
+            if (startTime) {
+                this.metrics.patchLoadTime.set(name, Date_now() - startTime);
+                this._timers.delete(name);
             }
         },
         
-        // 记录API调用
+        // 记录API调用 - 优化版本
         recordApiCall(apiName) {
-            this.metrics.apiCallCounts[apiName] = (this.metrics.apiCallCounts[apiName] || 0) + 1;
+            const count = this.metrics.apiCallCounts.get(apiName) || 0;
+            this.metrics.apiCallCounts.set(apiName, count + 1);
         },
         
-        // 记录内存使用
+        // 记录内存使用 - 优化版本
         recordMemoryUsage() {
             if (isNode && process.memoryUsage) {
                 this.metrics.memoryUsage = {
                     ...process.memoryUsage(),
-                    timestamp: Date.now()
+                    timestamp: Date_now()
                 };
             }
         },
         
-        // 记录错误
+        // 记录错误 - 优化版本
         recordError(error, context) {
-            this.metrics.errors.push({
-                error: error.message || error,
-                context,
-                timestamp: Date.now(),
-                stack: error.stack
-            });
+            // 性能优化：限制错误记录数量
+            if (this.metrics.errors.length < 100) {
+                this.metrics.errors.push({
+                    error: error.message || error,
+                    context,
+                    timestamp: Date_now(),
+                    stack: error.stack
+                });
+            }
         },
         
-        // 获取性能报告
+        // 获取性能报告 - 优化版本
         getReport() {
             this.recordMemoryUsage();
-            const totalTime = Date.now() - this.startTime;
+            const totalTime = Date_now() - this.startTime;
             
+            // 性能优化：使用对象字面量而不是动态构建
             return {
                 总加载时间: totalTime + 'ms',
-                补丁加载时间: this.metrics.patchLoadTime,
-                API调用统计: this.metrics.apiCallCounts,
+                补丁加载时间: Object.fromEntries(this.metrics.patchLoadTime),
+                API调用统计: Object.fromEntries(this.metrics.apiCallCounts),
                 内存使用: this.metrics.memoryUsage,
                 错误记录: this.metrics.errors,
                 性能等级: this.getPerformanceGrade(totalTime)
             };
         },
         
-        // 性能等级评估
+        // 性能等级评估 - 优化版本
         getPerformanceGrade(totalTime) {
-            if (totalTime < 50) return '优秀 (A+)';
-            if (totalTime < 100) return '良好 (A)';
-            if (totalTime < 200) return '一般 (B)';
-            if (totalTime < 500) return '较差 (C)';
-            return '需要优化 (D)';
+            // 性能优化：使用 switch 语句
+            switch (true) {
+                case totalTime < 50: return '优秀 (A+)';
+                case totalTime < 100: return '良好 (A)';
+                case totalTime < 200: return '一般 (B)';
+                case totalTime < 500: return '较差 (C)';
+                default: return '需要优化 (D)';
+            }
         },
         
-        // 打印性能报告
+        // 打印性能报告 - 优化版本
         printReport() {
+            if (!shouldLog) return; // 生产环境跳过日志
+            
             const report = this.getReport();
             console.log('\n=== 性能监控报告 ===');
-            Object.entries(report).forEach(([key, value]) => {
+            
+            // 性能优化：减少字符串拼接
+            const logEntry = (key, value) => {
                 if (typeof value === 'object' && value !== null) {
                     console.log(`${key}:`);
-                    Object.entries(value).forEach(([subKey, subValue]) => {
+                    for (const [subKey, subValue] of Object.entries(value)) {
                         console.log(`  ${subKey}: ${JSON.stringify(subValue)}`);
-                    });
+                    }
                 } else {
                     console.log(`${key}: ${value}`);
                 }
-            });
+            };
+            
+            for (const [key, value] of Object.entries(report)) {
+                logEntry(key, value);
+            }
         }
     };
     
-    // 基准测试工具
+    // 基准测试工具 - 优化版本
     const benchmarkTool = {
-        tests: {},
+        tests: new Map(), // 使用 Map 提升性能
         
-        // 添加基准测试
+        // 添加基准测试 - 优化版本
         addTest(name, testFunction) {
-            this.tests[name] = testFunction;
+            this.tests.set(name, testFunction);
         },
         
-        // 运行单个测试
+        // 运行单个测试 - 优化版本
         runTest(name, iterations = 1000) {
-            if (!this.tests[name]) {
+            const testFunction = this.tests.get(name);
+            if (!testFunction) {
                 console.error(`基准测试 "${name}" 不存在`);
                 return null;
             }
             
-            const testFunction = this.tests[name];
-            const startTime = performance.now ? performance.now() : Date.now();
+            // 性能优化：使用 performance.now() 或 Date.now()
+            const startTime = performance?.now ? performance.now() : Date_now();
             
+            // 性能优化：预热运行
+            for (let i = 0; i < 10; i++) {
+                testFunction();
+            }
+            
+            // 实际测试
             for (let i = 0; i < iterations; i++) {
                 testFunction();
             }
             
-            const endTime = performance.now ? performance.now() : Date.now();
+            const endTime = performance?.now ? performance.now() : Date_now();
             const totalTime = endTime - startTime;
             const avgTime = totalTime / iterations;
             
@@ -131,24 +171,27 @@
                 iterations,
                 totalTime: totalTime.toFixed(2) + 'ms',
                 averageTime: avgTime.toFixed(4) + 'ms',
-                opsPerSecond: Math.round(1000 / avgTime)
+                opsPerSecond: Math_floor(1000 / avgTime)
             };
         },
         
-        // 运行所有测试
+        // 运行所有测试 - 优化版本
         runAllTests(iterations = 1000) {
-            console.log('\n=== 基准测试报告 ===');
-            const results = {};
+            if (!shouldLog) return new Map(); // 生产环境跳过测试
             
-            Object.keys(this.tests).forEach(testName => {
+            console.log('\n=== 基准测试报告 ===');
+            const results = new Map();
+            
+            // 性能优化：使用 for...of 循环
+            for (const [testName, testFunction] of this.tests) {
                 const result = this.runTest(testName, iterations);
                 if (result) {
-                    results[testName] = result;
+                    results.set(testName, result);
                     console.log(`${testName}:`);
                     console.log(`  平均耗时: ${result.averageTime}`);
                     console.log(`  每秒操作数: ${result.opsPerSecond}`);
                 }
-            });
+            }
             
             return results;
         }
@@ -168,11 +211,11 @@
         new Error('benchmark test error');
     });
     
-    // 智能配置系统
+    // 智能配置系统 - 优化版本
     const config = {
-        // 默认配置
-        defaults: {
-            location: {
+        // 性能优化：使用冻结对象防止意外修改
+        defaults: Object.freeze({
+            location: Object.freeze({
                 href: '',
                 protocol: ':',
                 host: '',
@@ -182,59 +225,86 @@
                 search: '',
                 hash: '',
                 origin: ''
-            },
-            navigator: {
+            }),
+            navigator: Object.freeze({
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 platform: 'Win32',
                 language: 'zh-CN',
-                languages: ['zh-CN', 'zh', 'en'],
+                languages: Object.freeze(['zh-CN', 'zh', 'en']),
                 hardwareConcurrency: 8,
                 deviceMemory: 8
-            },
-            window: {
+            }),
+            window: Object.freeze({
                 innerWidth: 1920,
                 innerHeight: 1080,
                 devicePixelRatio: 1
-            },
-            document: {
+            }),
+            document: Object.freeze({
                 title: 'Document',
                 domain: 'localhost',
                 characterSet: 'UTF-8'
-            }
-        },
+            })
+        }),
         
-        // 从环境变量或命令行参数获取配置
+        // 从环境变量或命令行参数获取配置 - 优化版本
         getFromEnv() {
             const env = process?.env || {};
+            
+            // 性能优化：缓存环境变量访问
+            const locationHref = env.LOCATION_HREF;
+            const locationProtocol = env.LOCATION_PROTOCOL;
+            const locationHost = env.LOCATION_HOST;
+            const locationHostname = env.LOCATION_HOSTNAME;
+            const locationPort = env.LOCATION_PORT;
+            const locationPathname = env.LOCATION_PATHNAME;
+            const locationSearch = env.LOCATION_SEARCH;
+            const locationHash = env.LOCATION_HASH;
+            const locationOrigin = env.LOCATION_ORIGIN;
+            
+            const navigatorUserAgent = env.NAVIGATOR_USER_AGENT;
+            const navigatorPlatform = env.NAVIGATOR_PLATFORM;
+            const navigatorLanguage = env.NAVIGATOR_LANGUAGE;
+            const navigatorLanguages = env.NAVIGATOR_LANGUAGES;
+            const navigatorHardwareConcurrency = env.NAVIGATOR_HARDWARE_CONCURRENCY;
+            const navigatorDeviceMemory = env.NAVIGATOR_DEVICE_MEMORY;
+            
+            const windowInnerWidth = env.WINDOW_INNER_WIDTH;
+            const windowInnerHeight = env.WINDOW_INNER_HEIGHT;
+            const windowDevicePixelRatio = env.WINDOW_DEVICE_PIXEL_RATIO;
+            
+            const documentTitle = env.DOCUMENT_TITLE;
+            const documentDomain = env.DOCUMENT_DOMAIN;
+            const documentCharacterSet = env.DOCUMENT_CHARACTER_SET;
+            
             return {
                 location: {
-                    href: env.LOCATION_HREF || this.defaults.location.href,
-                    protocol: env.LOCATION_PROTOCOL || this.defaults.location.protocol,
-                    host: env.LOCATION_HOST || this.defaults.location.host,
-                    hostname: env.LOCATION_HOSTNAME || this.defaults.location.hostname,
-                    port: env.LOCATION_PORT || this.defaults.location.port,
-                    pathname: env.LOCATION_PATHNAME || this.defaults.location.pathname,
-                    search: env.LOCATION_SEARCH || this.defaults.location.search,
-                    hash: env.LOCATION_HASH || this.defaults.location.hash,
-                    origin: env.LOCATION_ORIGIN || this.defaults.location.origin
+                    href: locationHref || this.defaults.location.href,
+                    protocol: locationProtocol || this.defaults.location.protocol,
+                    host: locationHost || this.defaults.location.host,
+                    hostname: locationHostname || this.defaults.location.hostname,
+                    port: locationPort || this.defaults.location.port,
+                    pathname: locationPathname || this.defaults.location.pathname,
+                    search: locationSearch || this.defaults.location.search,
+                    hash: locationHash || this.defaults.location.hash,
+                    origin: locationOrigin || this.defaults.location.origin
                 },
                 navigator: {
-                    userAgent: env.NAVIGATOR_USER_AGENT || this.defaults.navigator.userAgent,
-                    platform: env.NAVIGATOR_PLATFORM || this.defaults.navigator.platform,
-                    language: env.NAVIGATOR_LANGUAGE || this.defaults.navigator.language,
-                    languages: env.NAVIGATOR_LANGUAGES ? env.NAVIGATOR_LANGUAGES.split(',') : this.defaults.navigator.languages,
-                    hardwareConcurrency: parseInt(env.NAVIGATOR_HARDWARE_CONCURRENCY) || this.defaults.navigator.hardwareConcurrency,
-                    deviceMemory: parseInt(env.NAVIGATOR_DEVICE_MEMORY) || this.defaults.navigator.deviceMemory
+                    userAgent: navigatorUserAgent || this.defaults.navigator.userAgent,
+                    platform: navigatorPlatform || this.defaults.navigator.platform,
+                    language: navigatorLanguage || this.defaults.navigator.language,
+                    languages: navigatorLanguages ? navigatorLanguages.split(',') : this.defaults.navigator.languages,
+                    hardwareConcurrency: navigatorHardwareConcurrency ? parseInt(navigatorHardwareConcurrency) : this.defaults.navigator.hardwareConcurrency,
+                    deviceMemory: navigatorDeviceMemory ? parseInt(navigatorDeviceMemory) : this.defaults.navigator.deviceMemory
                 },
                 window: {
-                    innerWidth: parseInt(env.WINDOW_INNER_WIDTH) || this.defaults.window.innerWidth,
-                    innerHeight: parseInt(env.WINDOW_INNER_HEIGHT) || this.defaults.window.innerHeight,
-                    devicePixelRatio: parseFloat(env.WINDOW_DEVICE_PIXEL_RATIO) || this.defaults.window.devicePixelRatio
+                    innerWidth: windowInnerWidth ? parseInt(windowInnerWidth) : this.defaults.window.innerWidth,
+                    innerHeight: windowInnerHeight ? parseInt(windowInnerHeight) : this.defaults.window.innerHeight,
+                    devicePixelRatio: windowDevicePixelRatio ? parseFloat(windowDevicePixelRatio) : this.defaults.window.devicePixelRatio
                 },
                 document: {
-                    title: env.DOCUMENT_TITLE || this.defaults.document.title,
-                    domain: env.DOCUMENT_DOMAIN || this.defaults.document.domain,
-                    characterSet: env.DOCUMENT_CHARACTER_SET || this.defaults.document.characterSet
+                    title: documentTitle || this.defaults.document.title,
+                    domain: documentDomain || this.defaults.document.domain,
+                    characterSet: documentCharacterSet || this.defaults.document.characterSet
                 }
             };
         },
@@ -850,6 +920,7 @@ const smartConfig = config.getSmartConfig();
         console.log('正在加载Navigator补丁...');
         
         const navigator = {
+            // 基础信息
             appCodeName: 'Mozilla',
             appName: 'Netscape',
             appVersion: smartConfig.navigator.userAgent,
@@ -861,66 +932,544 @@ const smartConfig = config.getSmartConfig();
             userAgent: smartConfig.navigator.userAgent,
             language: smartConfig.navigator.language,
             languages: smartConfig.navigator.languages,
+            
+            // 连接状态
             onLine: true,
             cookieEnabled: true,
+            
+            // 硬件信息
             hardwareConcurrency: smartConfig.navigator.hardwareConcurrency,
             maxTouchPoints: 0,
             deviceMemory: smartConfig.navigator.deviceMemory,
+            
+            // 隐私和安全
             webdriver: false,
             doNotTrack: null,
             
-            // 兼容性API
+            // 网络连接信息
+            connection: {
+                effectiveType: '4g',
+                downlink: 10,
+                rtt: 50,
+                saveData: false,
+                addEventListener: function() {},
+                removeEventListener: function() {}
+            },
+            
+            // 设备信息
+            deviceMemory: smartConfig.navigator.deviceMemory,
+            maxTouchPoints: 0,
+            
+            // 地理位置
+            geolocation: {
+                getCurrentPosition: function(success, error, options) {
+                    performanceMonitor.recordApiCall('navigator.geolocation.getCurrentPosition');
+                    console.log('[Navigator] getCurrentPosition called');
+                    if (success) {
+                        setTimeout(() => {
+                            success({
+                                coords: {
+                                    latitude: 37.7749,
+                                    longitude: -122.4194,
+                                    accuracy: 10,
+                                    altitude: null,
+                                    altitudeAccuracy: null,
+                                    heading: null,
+                                    speed: null
+                                },
+                                timestamp: Date.now()
+                            });
+                        }, 100);
+                    }
+                },
+                watchPosition: function(success, error, options) {
+                    performanceMonitor.recordApiCall('navigator.geolocation.watchPosition');
+                    console.log('[Navigator] watchPosition called');
+                    return 1; // 返回watchId
+                },
+                clearWatch: function(watchId) {
+                    performanceMonitor.recordApiCall('navigator.geolocation.clearWatch');
+                    console.log('[Navigator] clearWatch called:', watchId);
+                }
+            },
+            
+            // 电池API
             getBattery: function() {
+                performanceMonitor.recordApiCall('navigator.getBattery');
+                console.log('[Navigator] getBattery called');
                 return Promise.resolve({
                     charging: true,
                     chargingTime: Infinity,
                     dischargingTime: Infinity,
                     level: 1.0,
-                    addEventListener: function() {},
-                    removeEventListener: function() {}
+                    addEventListener: function(type, listener) {
+                        console.log('[Battery] addEventListener:', type);
+                    },
+                    removeEventListener: function(type, listener) {
+                        console.log('[Battery] removeEventListener:', type);
+                    }
                 });
             },
-            getGamepads: function() { return []; },
+            
+            // 游戏手柄API
+            getGamepads: function() {
+                performanceMonitor.recordApiCall('navigator.getGamepads');
+                console.log('[Navigator] getGamepads called');
+                return [];
+            },
+            
+            // 媒体API
             getUserMedia: function(constraints) {
+                performanceMonitor.recordApiCall('navigator.getUserMedia');
+                console.log('[Navigator] getUserMedia called:', constraints);
                 return Promise.resolve({
                     getTracks: function() { return []; },
                     getAudioTracks: function() { return []; },
                     getVideoTracks: function() { return []; },
-                    addTrack: function() {},
-                    removeTrack: function() {},
+                    addTrack: function(track) {
+                        console.log('[MediaStream] addTrack:', track);
+                    },
+                    removeTrack: function(track) {
+                        console.log('[MediaStream] removeTrack:', track);
+                    },
                     clone: function() { return this; },
-                    stop: function() {}
+                    stop: function() {
+                        console.log('[MediaStream] stop');
+                    },
+                    active: true,
+                    id: 'mock-stream-id'
                 });
             },
-            vibrate: function(pattern) { return true; },
-            share: function(data) { return Promise.resolve(); },
-            clearAppBadge: function() { return Promise.resolve(); },
-            setAppBadge: function(contents) { return Promise.resolve(); },
-            javaEnabled: function() { return false; },
-            taintEnabled: function() { return false; },
             
-            // 现代API
+            // 振动API
+            vibrate: function(pattern) {
+                performanceMonitor.recordApiCall('navigator.vibrate');
+                console.log('[Navigator] vibrate called:', pattern);
+                return true;
+            },
+            
+            // 分享API
+            share: function(data) {
+                performanceMonitor.recordApiCall('navigator.share');
+                console.log('[Navigator] share called:', data);
+                return Promise.resolve();
+            },
+            
+            // 应用徽章API
+            clearAppBadge: function() {
+                performanceMonitor.recordApiCall('navigator.clearAppBadge');
+                console.log('[Navigator] clearAppBadge called');
+                return Promise.resolve();
+            },
+            setAppBadge: function(contents) {
+                performanceMonitor.recordApiCall('navigator.setAppBadge');
+                console.log('[Navigator] setAppBadge called:', contents);
+                return Promise.resolve();
+            },
+            
+            // Java相关（已废弃）
+            javaEnabled: function() {
+                performanceMonitor.recordApiCall('navigator.javaEnabled');
+                console.log('[Navigator] javaEnabled called');
+                return false;
+            },
+            taintEnabled: function() {
+                performanceMonitor.recordApiCall('navigator.taintEnabled');
+                console.log('[Navigator] taintEnabled called');
+                return false;
+            },
+            
+            // 权限API
             permissions: {
-                query: function() { return Promise.resolve({ state: 'granted' }); }
+                query: function(permissionDescriptor) {
+                    performanceMonitor.recordApiCall('navigator.permissions.query');
+                    console.log('[Navigator] permissions.query called:', permissionDescriptor);
+                    return Promise.resolve({ 
+                        state: 'granted',
+                        onchange: null
+                    });
+                }
             },
+            
+            // 剪贴板API
             clipboard: {
-                writeText: function(text) { return Promise.resolve(); },
-                readText: function() { return Promise.resolve(''); }
+                writeText: function(text) {
+                    performanceMonitor.recordApiCall('navigator.clipboard.writeText');
+                    console.log('[Navigator] clipboard.writeText called:', text);
+                    return Promise.resolve();
+                },
+                readText: function() {
+                    performanceMonitor.recordApiCall('navigator.clipboard.readText');
+                    console.log('[Navigator] clipboard.readText called');
+                    return Promise.resolve('');
+                },
+                read: function() {
+                    performanceMonitor.recordApiCall('navigator.clipboard.read');
+                    console.log('[Navigator] clipboard.read called');
+                    return Promise.resolve([]);
+                },
+                write: function(data) {
+                    performanceMonitor.recordApiCall('navigator.clipboard.write');
+                    console.log('[Navigator] clipboard.write called:', data);
+                    return Promise.resolve();
+                }
             },
+            
+            // Service Worker
             serviceWorker: undefined,
+            
+            // 用户激活状态
             userActivation: {
                 hasBeenActive: false,
                 isActive: false
             },
+            
+            // 媒体设备
             mediaDevices: {
                 getUserMedia: function(constraints) {
-                    return Promise.resolve({});
+                    performanceMonitor.recordApiCall('navigator.mediaDevices.getUserMedia');
+                    console.log('[Navigator] mediaDevices.getUserMedia called:', constraints);
+                    return Promise.resolve({
+                        getTracks: function() { return []; },
+                        getAudioTracks: function() { return []; },
+                        getVideoTracks: function() { return []; },
+                        addTrack: function() {},
+                        removeTrack: function() {},
+                        clone: function() { return this; },
+                        stop: function() {},
+                        active: true,
+                        id: 'mock-stream-id'
+                    });
+                },
+                enumerateDevices: function() {
+                    performanceMonitor.recordApiCall('navigator.mediaDevices.enumerateDevices');
+                    console.log('[Navigator] mediaDevices.enumerateDevices called');
+                    return Promise.resolve([]);
+                },
+                getDisplayMedia: function(constraints) {
+                    performanceMonitor.recordApiCall('navigator.mediaDevices.getDisplayMedia');
+                    console.log('[Navigator] mediaDevices.getDisplayMedia called:', constraints);
+                    return Promise.resolve({
+                        getTracks: function() { return []; },
+                        getVideoTracks: function() { return []; },
+                        addTrack: function() {},
+                        removeTrack: function() {},
+                        clone: function() { return this; },
+                        stop: function() {},
+                        active: true,
+                        id: 'mock-display-stream-id'
+                    });
+                }
+            },
+            
+            // 存储API
+            storage: {
+                estimate: function() {
+                    performanceMonitor.recordApiCall('navigator.storage.estimate');
+                    console.log('[Navigator] storage.estimate called');
+                    return Promise.resolve({
+                        quota: 1073741824, // 1GB
+                        usage: 1048576,    // 1MB
+                        usageDetails: {
+                            caches: 0,
+                            indexedDB: 0,
+                            serviceWorkerRegistrations: 0
+                        }
+                    });
+                },
+                persist: function() {
+                    performanceMonitor.recordApiCall('navigator.storage.persist');
+                    console.log('[Navigator] storage.persist called');
+                    return Promise.resolve(true);
+                },
+                persisted: function() {
+                    performanceMonitor.recordApiCall('navigator.storage.persisted');
+                    console.log('[Navigator] storage.persisted called');
+                    return Promise.resolve(false);
+                }
+            },
+            
+            // 网络信息API
+            networkInformation: {
+                effectiveType: '4g',
+                downlink: 10,
+                rtt: 50,
+                saveData: false,
+                addEventListener: function(type, listener) {
+                    console.log('[NetworkInformation] addEventListener:', type);
+                },
+                removeEventListener: function(type, listener) {
+                    console.log('[NetworkInformation] removeEventListener:', type);
+                }
+            },
+            
+            // 设备方向API
+            deviceOrientation: {
+                addEventListener: function(type, listener) {
+                    console.log('[DeviceOrientation] addEventListener:', type);
+                },
+                removeEventListener: function(type, listener) {
+                    console.log('[DeviceOrientation] removeEventListener:', type);
+                }
+            },
+            
+            // 设备运动API
+            deviceMotion: {
+                addEventListener: function(type, listener) {
+                    console.log('[DeviceMotion] addEventListener:', type);
+                },
+                removeEventListener: function(type, listener) {
+                    console.log('[DeviceMotion] removeEventListener:', type);
                 }
             },
             
             // 事件监听
-            addEventListener: function() {},
-            removeEventListener: function() {}
+            addEventListener: function(type, listener, options) {
+                performanceMonitor.recordApiCall('navigator.addEventListener');
+                console.log('[Navigator] addEventListener:', type, typeof listener, options);
+            },
+            removeEventListener: function(type, listener, options) {
+                performanceMonitor.recordApiCall('navigator.removeEventListener');
+                console.log('[Navigator] removeEventListener:', type, typeof listener, options);
+            },
+            
+            // 其他现代API
+            presentation: {
+                defaultRequest: null,
+                receiver: null
+            },
+            
+            // 虚拟键盘API
+            virtualKeyboard: {
+                boundingRect: { x: 0, y: 0, width: 0, height: 0 },
+                overlaysContent: false,
+                visible: false,
+                addEventListener: function(type, listener) {
+                    console.log('[VirtualKeyboard] addEventListener:', type);
+                },
+                removeEventListener: function(type, listener) {
+                    console.log('[VirtualKeyboard] removeEventListener:', type);
+                }
+            },
+            
+            // 键盘API
+            keyboard: {
+                lock: function(keyCodes) {
+                    performanceMonitor.recordApiCall('navigator.keyboard.lock');
+                    console.log('[Navigator] keyboard.lock called:', keyCodes);
+                    return Promise.resolve();
+                },
+                unlock: function() {
+                    performanceMonitor.recordApiCall('navigator.keyboard.unlock');
+                    console.log('[Navigator] keyboard.unlock called');
+                },
+                getModifierState: function(keyArg) {
+                    performanceMonitor.recordApiCall('navigator.keyboard.getModifierState');
+                    console.log('[Navigator] keyboard.getModifierState called:', keyArg);
+                    return false;
+                }
+            },
+            
+            // 锁屏API
+            wakeLock: {
+                request: function(type) {
+                    performanceMonitor.recordApiCall('navigator.wakeLock.request');
+                    console.log('[Navigator] wakeLock.request called:', type);
+                    return Promise.resolve({
+                        released: false,
+                        addEventListener: function(type, listener) {
+                            console.log('[WakeLockSentinel] addEventListener:', type);
+                        },
+                        removeEventListener: function(type, listener) {
+                            console.log('[WakeLockSentinel] removeEventListener:', type);
+                        }
+                    });
+                }
+            },
+            
+            // 联系人API
+            contacts: {
+                select: function(properties, options) {
+                    performanceMonitor.recordApiCall('navigator.contacts.select');
+                    console.log('[Navigator] contacts.select called:', properties, options);
+                    return Promise.resolve([]);
+                }
+            },
+            
+            // 蓝牙API
+            bluetooth: {
+                requestDevice: function(options) {
+                    performanceMonitor.recordApiCall('navigator.bluetooth.requestDevice');
+                    console.log('[Navigator] bluetooth.requestDevice called:', options);
+                    return Promise.resolve({
+                        id: 'mock-device-id',
+                        name: 'Mock Bluetooth Device',
+                        gatt: {
+                            connect: function() {
+                                return Promise.resolve({
+                                    getPrimaryService: function() {
+                                        return Promise.resolve({
+                                            getCharacteristic: function() {
+                                                return Promise.resolve({
+                                                    readValue: function() {
+                                                        return Promise.resolve(new ArrayBuffer(0));
+                                                    },
+                                                    writeValue: function() {
+                                                        return Promise.resolve();
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    });
+                },
+                getAvailability: function() {
+                    performanceMonitor.recordApiCall('navigator.bluetooth.getAvailability');
+                    console.log('[Navigator] bluetooth.getAvailability called');
+                    return Promise.resolve(false);
+                }
+            },
+            
+            // USB API
+            usb: {
+                requestDevice: function(options) {
+                    performanceMonitor.recordApiCall('navigator.usb.requestDevice');
+                    console.log('[Navigator] usb.requestDevice called:', options);
+                    return Promise.resolve({
+                        productId: 0,
+                        vendorId: 0,
+                        manufacturerName: 'Mock USB Device',
+                        productName: 'Mock Device',
+                        serialNumber: 'mock-serial'
+                    });
+                },
+                getDevices: function() {
+                    performanceMonitor.recordApiCall('navigator.usb.getDevices');
+                    console.log('[Navigator] usb.getDevices called');
+                    return Promise.resolve([]);
+                }
+            },
+            
+            // 串口API
+            serial: {
+                requestPort: function(options) {
+                    performanceMonitor.recordApiCall('navigator.serial.requestPort');
+                    console.log('[Navigator] serial.requestPort called:', options);
+                    return Promise.resolve({
+                        readable: null,
+                        writable: null,
+                        getSignals: function() {
+                            return Promise.resolve({
+                                dataTerminalReady: false,
+                                dataSetReady: false,
+                                ringIndicator: false,
+                                carrierDetect: false
+                            });
+                        },
+                        setSignals: function(signals) {
+                            return Promise.resolve();
+                        }
+                    });
+                },
+                getPorts: function() {
+                    performanceMonitor.recordApiCall('navigator.serial.getPorts');
+                    console.log('[Navigator] serial.getPorts called');
+                    return Promise.resolve([]);
+                }
+            },
+            
+            // HID API
+            hid: {
+                requestDevice: function(options) {
+                    performanceMonitor.recordApiCall('navigator.hid.requestDevice');
+                    console.log('[Navigator] hid.requestDevice called:', options);
+                    return Promise.resolve([]);
+                },
+                getDevices: function() {
+                    performanceMonitor.recordApiCall('navigator.hid.getDevices');
+                    console.log('[Navigator] hid.getDevices called');
+                    return Promise.resolve([]);
+                }
+            },
+            
+            // 更多现代API
+            // 支付API
+            payment: {
+                request: function(methodData, details, options) {
+                    performanceMonitor.recordApiCall('navigator.payment.request');
+                    console.log('[Navigator] payment.request called:', methodData, details, options);
+                    return Promise.resolve({
+                        requestId: 'mock-payment-id',
+                        methodName: 'basic-card',
+                        details: {},
+                        shippingAddress: null,
+                        shippingOption: null,
+                        payerName: null,
+                        payerEmail: null,
+                        payerPhone: null
+                    });
+                }
+            },
+            
+            // 凭证管理API
+            credentials: {
+                create: function(options) {
+                    performanceMonitor.recordApiCall('navigator.credentials.create');
+                    console.log('[Navigator] credentials.create called:', options);
+                    return Promise.resolve({
+                        id: 'mock-credential-id',
+                        type: 'public-key',
+                        rawId: new ArrayBuffer(0),
+                        response: {
+                            clientDataJSON: new ArrayBuffer(0),
+                            attestationObject: new ArrayBuffer(0)
+                        }
+                    });
+                },
+                get: function(options) {
+                    performanceMonitor.recordApiCall('navigator.credentials.get');
+                    console.log('[Navigator] credentials.get called:', options);
+                    return Promise.resolve(null);
+                },
+                store: function(credential) {
+                    performanceMonitor.recordApiCall('navigator.credentials.store');
+                    console.log('[Navigator] credentials.store called:', credential);
+                    return Promise.resolve(credential);
+                },
+                preventSilentAccess: function() {
+                    performanceMonitor.recordApiCall('navigator.credentials.preventSilentAccess');
+                    console.log('[Navigator] credentials.preventSilentAccess called');
+                }
+            },
+            
+            // 锁屏API增强
+            locks: {
+                request: function(name, callback, options) {
+                    performanceMonitor.recordApiCall('navigator.locks.request');
+                    console.log('[Navigator] locks.request called:', name, options);
+                    return Promise.resolve();
+                },
+                query: function() {
+                    performanceMonitor.recordApiCall('navigator.locks.query');
+                    console.log('[Navigator] locks.query called');
+                    return Promise.resolve({
+                        held: [],
+                        pending: []
+                    });
+                }
+            },
+            
+            // 调度API
+            scheduling: {
+                isInputPending: function(options) {
+                    performanceMonitor.recordApiCall('navigator.scheduling.isInputPending');
+                    console.log('[Navigator] scheduling.isInputPending called:', options);
+                    return false;
+                }
+            }
         };
         
         // 补充原型链
@@ -930,18 +1479,114 @@ const smartConfig = config.getSmartConfig();
         Object.setPrototypeOf(navigator, Navigator.prototype);
         navigator.constructor = Navigator;
         
-        // 补充 plugins 和 mimeTypes
-        navigator.plugins = {
-            length: 0,
-            item: function() { return null; },
-            namedItem: function() { return null; }
-        };
-        navigator.mimeTypes = {
-            length: 0,
-            item: function() { return null; },
-            namedItem: function() { return null; }
+        // 设置 Symbol.toStringTag
+        Object.defineProperty(navigator, Symbol.toStringTag, {
+            value: 'Navigator',
+            configurable: true
+        });
+        
+        // 添加迭代器支持
+        navigator[Symbol.iterator] = function*() {
+            const keys = Object.keys(this);
+            for (const key of keys) {
+                if (typeof this[key] !== 'function') {
+                    yield [key, this[key]];
+                }
+            }
         };
         
+        // 补充 plugins 和 mimeTypes
+        const commonPlugins = [
+            {
+                name: 'Chrome PDF Plugin',
+                filename: 'internal-pdf-viewer',
+                description: 'Portable Document Format',
+                length: 1
+            },
+            {
+                name: 'Chrome PDF Viewer',
+                filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
+                description: 'Portable Document Format',
+                length: 1
+            },
+            {
+                name: 'Native Client',
+                filename: 'internal-nacl-plugin',
+                description: 'Native Client Executable',
+                length: 1
+            }
+        ];
+        
+        const commonMimeTypes = [
+            {
+                type: 'application/pdf',
+                suffixes: 'pdf',
+                description: 'Portable Document Format',
+                enabledPlugin: commonPlugins[0]
+            },
+            {
+                type: 'application/x-google-chrome-pdf',
+                suffixes: 'pdf',
+                description: 'Portable Document Format',
+                enabledPlugin: commonPlugins[1]
+            },
+            {
+                type: 'application/x-nacl',
+                suffixes: '',
+                description: 'Native Client Executable',
+                enabledPlugin: commonPlugins[2]
+            }
+        ];
+        
+        navigator.plugins = {
+            length: commonPlugins.length,
+            item: function(index) {
+                return commonPlugins[index] || null;
+            },
+            namedItem: function(name) {
+                return commonPlugins.find(plugin => plugin.name === name) || null;
+            },
+            refresh: function() {
+                console.log('[Navigator] plugins.refresh called');
+            }
+        };
+        
+        // 设置 plugins 的 Symbol.toStringTag
+        Object.defineProperty(navigator.plugins, Symbol.toStringTag, {
+            value: 'PluginArray',
+            configurable: true
+        });
+        
+        // 添加 plugins 的迭代器
+        navigator.plugins[Symbol.iterator] = function*() {
+            for (let i = 0; i < this.length; i++) {
+                yield this.item(i);
+            }
+        };
+        
+        navigator.mimeTypes = {
+            length: commonMimeTypes.length,
+            item: function(index) {
+                return commonMimeTypes[index] || null;
+            },
+            namedItem: function(name) {
+                return commonMimeTypes.find(mimeType => mimeType.type === name) || null;
+            }
+        };
+        
+        // 设置 mimeTypes 的 Symbol.toStringTag
+        Object.defineProperty(navigator.mimeTypes, Symbol.toStringTag, {
+            value: 'MimeTypeArray',
+            configurable: true
+        });
+        
+        // 添加 mimeTypes 的迭代器
+        navigator.mimeTypes[Symbol.iterator] = function*() {
+            for (let i = 0; i < this.length; i++) {
+                yield this.item(i);
+            }
+        };
+
         // 设置到全局对象
         try {
             // 只有在 globalObj.navigator 不存在时才设置
@@ -964,21 +1609,21 @@ const smartConfig = config.getSmartConfig();
             // 最终兜底，静默跳过
             console.warn('[BrowserEnvPatch] navigator 属性为只读，无法覆盖，已跳过。');
         }
-        
+
         patchStatus.navigator = true;
         performanceMonitor.endTimer('navigator');
         console.log('✓ Navigator补丁加载成功');
-        
+
     } catch (e) {
         performanceMonitor.recordError(e, 'Navigator补丁加载');
         console.error('✗ Navigator补丁加载失败:', e.message);
     }
-    
+
     // 加载Location补丁
     try {
         performanceMonitor.startTimer('location');
         console.log('正在加载Location补丁...');
-        
+
         function createSafeDOMStringList(items = []) {
             try {
                 if (typeof DOMStringList !== 'undefined') {
@@ -994,7 +1639,7 @@ const smartConfig = config.getSmartConfig();
             }
             return [];
         }
-        
+
         const location = {
             _href: smartConfig.location.href,
             _protocol: smartConfig.location.protocol,
@@ -1106,11 +1751,11 @@ const smartConfig = config.getSmartConfig();
             toString: function() {
                 return this._href;
             },
-            
+
             valueOf: function() {
                 return this._href;
             },
-            
+
             // 内部方法：从完整URL更新所有属性
             _updateFromHref: function(url) {
                 try {
@@ -1126,7 +1771,7 @@ const smartConfig = config.getSmartConfig();
                     this._origin = urlObj.origin;
                     this._username = urlObj.username;
                     this._password = urlObj.password;
-                    
+
                     // 重置searchParams以便重新解析
                     this._searchParams = null;
                 } catch (e) {
@@ -1137,449 +1782,501 @@ const smartConfig = config.getSmartConfig();
 
         // 设置到全局对象
         globalObj.location = location;
-        
+
         patchStatus.location = true;
         performanceMonitor.endTimer('location');
         console.log('✓ Location补丁加载成功');
-        
+
     } catch (e) {
         performanceMonitor.recordError(e, 'Location补丁加载');
         console.error('✗ Location补丁加载失败:', e.message);
     }
-    
+
     // 加载Document补丁
     try {
         performanceMonitor.startTimer('document');
         console.log('正在加载Document补丁...');
-        
+
+        // 定义辅助函数
         function createHTMLCollection(items = []) {
             const collection = Array.from(items);
             collection.length = items.length;
-            collection.item = function(index) { return this[index] || null; };
-            collection.namedItem = function(name) { 
+            collection.item = function (index) {
+                return this[index] || null;
+            };
+            collection.namedItem = function (name) {
                 return this.find(item => item.id === name || item.name === name) || null;
             };
-            collection[Symbol.iterator] = function() { return this[Symbol.iterator](); };
+            collection[Symbol.iterator] = function () {
+                return this[Symbol.iterator]();
+            };
             return collection;
         }
-        
+
         function createNodeList(items = []) {
             const list = Array.from(items);
             list.length = items.length;
-            list.item = function(index) { return this[index] || null; };
-            list.entries = function() { return this.entries(); };
-            list.forEach = function(callback, thisArg) { return this.forEach(callback, thisArg); };
-            list.keys = function() { return this.keys(); };
-            list.values = function() { return this.values(); };
-            list[Symbol.iterator] = function() { return this[Symbol.iterator](); };
+            list.item = function (index) {
+                return this[index] || null;
+            };
+            list.entries = function () {
+                return this.entries();
+            };
+            list.forEach = function (callback, thisArg) {
+                return this.forEach(callback, thisArg);
+            };
+            list.keys = function () {
+                return this.keys();
+            };
+            list.values = function () {
+                return this.values();
+            };
+            list[Symbol.iterator] = function () {
+                return this[Symbol.iterator]();
+            };
             return list;
         }
-        
+
         function createElement(tagName) {
-            const element = {
-                // DOM Node 基础属性
-                tagName: tagName.toUpperCase(),
-                nodeType: 1, // ELEMENT_NODE
-                nodeName: tagName.toUpperCase(),
-                nodeValue: null,
-                ownerDocument: null, // 将在创建后设置
-                parentNode: null,
-                childNodes: [],
-                children: [],
-                nextSibling: null,
-                previousSibling: null,
-                firstChild: null,
-                lastChild: null,
-                firstElementChild: null,
-                lastElementChild: null,
-                
-                // Element 属性
-                textContent: '',
-                innerHTML: '',
-                outerHTML: '',
-                innerText: '',
-                id: '',
-                className: '',
-                name: '',
-                title: '',
-                lang: '',
-                dir: '',
-                hidden: false,
-                tabIndex: -1,
-                accessKey: '',
-                contentEditable: 'inherit',
-                isContentEditable: false,
-                spellcheck: true,
-                translate: true,
-                
-                // 命名空间
-                namespaceURI: 'http://www.w3.org/1999/xhtml',
-                prefix: null,
-                localName: tagName.toLowerCase(),
-                
-                // 尺寸和位置
-                clientTop: 0,
-                clientLeft: 0,
-                clientWidth: 0,
-                clientHeight: 0,
-                scrollTop: 0,
-                scrollLeft: 0,
-                scrollWidth: 0,
-                scrollHeight: 0,
-                offsetTop: 0,
-                offsetLeft: 0,
-                offsetWidth: 0,
-                offsetHeight: 0,
-                offsetParent: null,
-                classList: {
-                    add: function(...tokens) {
-                        console.log('[Element] classList.add:', tokens);
-                    },
-                    remove: function(...tokens) {
-                        console.log('[Element] classList.remove:', tokens);
-                    },
-                    toggle: function(token, force) {
-                        console.log('[Element] classList.toggle:', token, force);
-                        return false;
-                    },
-                    contains: function(token) {
-                        console.log('[Element] classList.contains:', token);
-                        return false;
-                    },
-                    replace: function(oldToken, newToken) {
-                        console.log('[Element] classList.replace:', oldToken, newToken);
-                    },
-                    length: 0
+            // 性能优化：使用 Object.create 和属性赋值
+            const element = Object.create({});
+
+            // 性能优化：直接赋值而不是动态计算
+            const upperTagName = tagName.toUpperCase();
+            element.tagName = upperTagName;
+            element.nodeName = upperTagName;
+            element.localName = tagName.toLowerCase();
+
+            // DOM Node 基础属性
+            element.nodeType = 1; // ELEMENT_NODE
+            element.nodeValue = null;
+            element.ownerDocument = null;
+            element.parentNode = null;
+            element.childNodes = [];
+            element.children = [];
+            element.nextSibling = null;
+            element.previousSibling = null;
+            element.firstChild = null;
+            element.lastChild = null;
+            element.firstElementChild = null;
+            element.lastElementChild = null;
+
+            // Element 属性
+            element.textContent = '';
+            element.innerHTML = '';
+            element.outerHTML = '';
+            element.innerText = '';
+            element.id = '';
+            element.className = '';
+            element.name = '';
+            element.title = '';
+            element.lang = '';
+            element.dir = '';
+            element.hidden = false;
+            element.tabIndex = -1;
+            element.accessKey = '';
+            element.contentEditable = 'inherit';
+            element.isContentEditable = false;
+            element.spellcheck = true;
+            element.translate = true;
+
+            // 命名空间
+            element.namespaceURI = 'http://www.w3.org/1999/xhtml';
+            element.prefix = null;
+
+            // 尺寸和位置
+            element.clientTop = 0;
+            element.clientLeft = 0;
+            element.clientWidth = 0;
+            element.clientHeight = 0;
+            element.scrollTop = 0;
+            element.scrollLeft = 0;
+            element.scrollWidth = 0;
+            element.scrollHeight = 0;
+            element.offsetTop = 0;
+            element.offsetLeft = 0;
+            element.offsetWidth = 0;
+            element.offsetHeight = 0;
+            element.offsetParent = null;
+
+            // 属性集合
+            element.attributes = {
+                length: 0,
+                getNamedItem: function (name) {
+                    return this[name] || null;
                 },
-                style: {
-                    cssText: '',
-                    getPropertyValue: function(property) {
-                        console.log('[Element] style.getPropertyValue:', property);
-                        return '';
-                    },
-                    setProperty: function(property, value, priority) {
-                        console.log('[Element] style.setProperty:', property, value, priority);
-                    },
-                    removeProperty: function(property) {
-                        console.log('[Element] style.removeProperty:', property);
-                    },
-                    item: function(index) {
-                        console.log('[Element] style.item:', index);
-                        return '';
-                    },
-                    length: 0
+                setNamedItem: function (attr) {
+                    this[attr.name] = attr;
+                    this.length = Object.keys(this).filter(k => k !== 'length' && typeof this[k] !== 'function').length;
+                    return attr;
                 },
-                // 属性集合
-                attributes: {
-                    length: 0,
-                    getNamedItem: function(name) {
-                        return this[name] || null;
-                    },
-                    setNamedItem: function(attr) {
-                        this[attr.name] = attr;
-                        this.length = Object.keys(this).filter(k => k !== 'length' && typeof this[k] !== 'function').length;
-                        return attr;
-                    },
-                    removeNamedItem: function(name) {
-                        const attr = this[name];
-                        delete this[name];
-                        this.length = Object.keys(this).filter(k => k !== 'length' && typeof this[k] !== 'function').length;
-                        return attr;
-                    },
-                    item: function(index) {
-                        const keys = Object.keys(this).filter(k => k !== 'length' && typeof this[k] !== 'function');
-                        return this[keys[index]] || null;
-                    }
+                removeNamedItem: function (name) {
+                    const attr = this[name];
+                    delete this[name];
+                    this.length = Object.keys(this).filter(k => k !== 'length' && typeof this[k] !== 'function').length;
+                    return attr;
                 },
-                
-                // DOM 操作方法
-                appendChild: function(child) {
-                    performanceMonitor.recordApiCall('element.appendChild');
-                    this.childNodes.push(child);
-                    if (child.nodeType === 1) { // ELEMENT_NODE
-                        this.children.push(child);
-                        this.lastElementChild = child;
-                        if (!this.firstElementChild) {
-                            this.firstElementChild = child;
-                        }
-                    }
-                    child.parentNode = this;
-                    child.parentElement = this.nodeType === 1 ? this : null;
-                    this.lastChild = child;
-                    if (!this.firstChild) {
-                        this.firstChild = child;
-                    }
-                    // 更新兄弟节点关系
-                    if (this.childNodes.length > 1) {
-                        const prevChild = this.childNodes[this.childNodes.length - 2];
-                        prevChild.nextSibling = child;
-                        child.previousSibling = prevChild;
-                    }
-                    return child;
-                },
-                
-                removeChild: function(child) {
-                    performanceMonitor.recordApiCall('element.removeChild');
-                    const index = this.childNodes.indexOf(child);
-                    if (index !== -1) {
-                        this.childNodes.splice(index, 1);
-                        if (child.nodeType === 1) {
-                            const elemIndex = this.children.indexOf(child);
-                            if (elemIndex !== -1) {
-                                this.children.splice(elemIndex, 1);
-                            }
-                            // 更新 first/last ElementChild
-                            this.firstElementChild = this.children[0] || null;
-                            this.lastElementChild = this.children[this.children.length - 1] || null;
-                        }
-                        child.parentNode = null;
-                        child.parentElement = null;
-                        // 更新兄弟节点关系
-                        if (child.previousSibling) {
-                            child.previousSibling.nextSibling = child.nextSibling;
-                        }
-                        if (child.nextSibling) {
-                            child.nextSibling.previousSibling = child.previousSibling;
-                        }
-                        child.nextSibling = null;
-                        child.previousSibling = null;
-                        // 更新 first/last Child
-                        this.firstChild = this.childNodes[0] || null;
-                        this.lastChild = this.childNodes[this.childNodes.length - 1] || null;
-                    }
-                    return child;
-                },
-                
-                insertBefore: function(newChild, referenceChild) {
-                    performanceMonitor.recordApiCall('element.insertBefore');
-                    if (!referenceChild) {
-                        return this.appendChild(newChild);
-                    }
-                    const index = this.childNodes.indexOf(referenceChild);
-                    if (index !== -1) {
-                        this.childNodes.splice(index, 0, newChild);
-                        if (newChild.nodeType === 1) {
-                            const elemIndex = this.children.indexOf(referenceChild);
-                            if (elemIndex !== -1) {
-                                this.children.splice(elemIndex, 0, newChild);
-                            }
-                        }
-                        newChild.parentNode = this;
-                        newChild.parentElement = this.nodeType === 1 ? this : null;
-                        // 更新兄弟节点关系
-                        newChild.nextSibling = referenceChild;
-                        newChild.previousSibling = referenceChild.previousSibling;
-                        if (referenceChild.previousSibling) {
-                            referenceChild.previousSibling.nextSibling = newChild;
-                        }
-                        referenceChild.previousSibling = newChild;
-                    }
-                    return newChild;
-                },
-                
-                replaceChild: function(newChild, oldChild) {
-                    performanceMonitor.recordApiCall('element.replaceChild');
-                    this.insertBefore(newChild, oldChild);
-                    return this.removeChild(oldChild);
-                },
-                
-                cloneNode: function(deep) {
-                    performanceMonitor.recordApiCall('element.cloneNode');
-                    const clone = document.createElement(this.tagName);
-                    // 复制属性
-                    clone.id = this.id;
-                    clone.className = this.className;
-                    clone.textContent = deep ? this.textContent : '';
-                    // 简化实现，不复制所有属性和子节点
-                    return clone;
-                },
-                
-                // 属性操作
-                getAttribute: function(name) {
-                    performanceMonitor.recordApiCall('element.getAttribute');
-                    return this.attributes.getNamedItem(name)?.value || null;
-                },
-                
-                setAttribute: function(name, value) {
-                    performanceMonitor.recordApiCall('element.setAttribute');
-                    const attr = document.createAttribute(name);
-                    attr.value = String(value);
-                    this.attributes.setNamedItem(attr);
-                    
-                    // 处理特殊属性
-                    if (name === 'id') {
-                        this.id = value;
-                    } else if (name === 'class') {
-                        this.className = value;
-                    }
-                },
-                
-                removeAttribute: function(name) {
-                    performanceMonitor.recordApiCall('element.removeAttribute');
-                    this.attributes.removeNamedItem(name);
-                    if (name === 'id') {
-                        this.id = '';
-                    } else if (name === 'class') {
-                        this.className = '';
-                    }
-                },
-                
-                hasAttribute: function(name) {
-                    performanceMonitor.recordApiCall('element.hasAttribute');
-                    return this.attributes.getNamedItem(name) !== null;
-                },
-                
-                getAttributeNames: function() {
-                    performanceMonitor.recordApiCall('element.getAttributeNames');
-                    return Object.keys(this.attributes).filter(k => k !== 'length' && typeof this.attributes[k] !== 'function');
-                },
-                
-                // 查询方法
-                querySelector: function(selectors) {
-                    performanceMonitor.recordApiCall('element.querySelector');
-                    console.log('[Element] querySelector:', selectors);
-                    return null;
-                },
-                
-                querySelectorAll: function(selectors) {
-                    performanceMonitor.recordApiCall('element.querySelectorAll');
-                    console.log('[Element] querySelectorAll:', selectors);
-                    return createNodeList([]);
-                },
-                
-                getElementsByTagName: function(tagName) {
-                    performanceMonitor.recordApiCall('element.getElementsByTagName');
-                    console.log('[Element] getElementsByTagName:', tagName);
-                    return createHTMLCollection([]);
-                },
-                
-                getElementsByClassName: function(classNames) {
-                    performanceMonitor.recordApiCall('element.getElementsByClassName');
-                    console.log('[Element] getElementsByClassName:', classNames);
-                    return createHTMLCollection([]);
-                },
-                
-                // 匹配方法
-                matches: function(selectors) {
-                    performanceMonitor.recordApiCall('element.matches');
-                    console.log('[Element] matches:', selectors);
-                    return false;
-                },
-                
-                closest: function(selectors) {
-                    performanceMonitor.recordApiCall('element.closest');
-                    console.log('[Element] closest:', selectors);
-                    return null;
-                },
-                
-                // 焦点方法
-                focus: function(options) {
-                    performanceMonitor.recordApiCall('element.focus');
-                    console.log('[Element] focus:', options);
-                    document.activeElement = this;
-                },
-                
-                blur: function() {
-                    performanceMonitor.recordApiCall('element.blur');
-                    console.log('[Element] blur');
-                    if (document.activeElement === this) {
-                        document.activeElement = null;
-                    }
-                },
-                
-                // 滚动方法
-                scrollIntoView: function(options) {
-                    performanceMonitor.recordApiCall('element.scrollIntoView');
-                    console.log('[Element] scrollIntoView:', options);
-                },
-                
-                scrollTo: function(x, y) {
-                    performanceMonitor.recordApiCall('element.scrollTo');
-                    if (typeof x === 'object') {
-                        this.scrollLeft = x.left || 0;
-                        this.scrollTop = x.top || 0;
-                    } else {
-                        this.scrollLeft = x || 0;
-                        this.scrollTop = y || 0;
-                    }
-                },
-                
-                scrollBy: function(x, y) {
-                    performanceMonitor.recordApiCall('element.scrollBy');
-                    if (typeof x === 'object') {
-                        this.scrollLeft += x.left || 0;
-                        this.scrollTop += x.top || 0;
-                    } else {
-                        this.scrollLeft += x || 0;
-                        this.scrollTop += y || 0;
-                    }
-                },
-                
-                // 边界框方法
-                getBoundingClientRect: function() {
-                    performanceMonitor.recordApiCall('element.getBoundingClientRect');
-                    return {
-                        top: this.offsetTop,
-                        left: this.offsetLeft,
-                        right: this.offsetLeft + this.offsetWidth,
-                        bottom: this.offsetTop + this.offsetHeight,
-                        width: this.offsetWidth,
-                        height: this.offsetHeight,
-                        x: this.offsetLeft,
-                        y: this.offsetTop
-                    };
-                },
-                
-                getClientRects: function() {
-                    performanceMonitor.recordApiCall('element.getClientRects');
-                    return [this.getBoundingClientRect()];
-                },
-                
-                // 事件方法
-                addEventListener: function(type, listener, options) {
-                    performanceMonitor.recordApiCall('element.addEventListener');
-                    console.log('[Element] addEventListener:', type, typeof listener, options);
-                },
-                
-                removeEventListener: function(type, listener, options) {
-                    performanceMonitor.recordApiCall('element.removeEventListener');
-                    console.log('[Element] removeEventListener:', type, typeof listener, options);
-                },
-                
-                dispatchEvent: function(event) {
-                    performanceMonitor.recordApiCall('element.dispatchEvent');
-                    console.log('[Element] dispatchEvent:', event.type);
-                    return true;
-                },
-                // 支持 canvas.getContext
-                getContext: function(type) {
-                    // 简单 mock 2d context
-                    return {
-                        fillRect: function() {},
-                        clearRect: function() {},
-                        getImageData: function() { return { data: [] }; },
-                        putImageData: function() {},
-                        createImageData: function() { return []; },
-                        setTransform: function() {},
-                        drawImage: function() {},
-                        save: function() {},
-                        fillText: function() {},
-                        restore: function() {},
-                        beginPath: function() {},
-                        moveTo: function() {},
-                        lineTo: function() {},
-                        closePath: function() {},
-                        stroke: function() {},
-                        translate: function() {},
-                        scale: function() {},
-                        rotate: function() {},
-                        arc: function() {},
-                        fill: function() {},
-                        measureText: function() { return { width: 0 }; }
-                    };
+                item: function (index) {
+                    const keys = Object.keys(this).filter(k => k !== 'length' && typeof this[k] !== 'function');
+                    return this[keys[index]] || null;
                 }
             };
-            
+
+            // classList
+            element.classList = {
+                add: function (...tokens) {
+                    if (shouldLog) console.log('[Element] classList.add:', tokens);
+                },
+                remove: function (...tokens) {
+                    if (shouldLog) console.log('[Element] classList.remove:', tokens);
+                },
+                toggle: function (token, force) {
+                    if (shouldLog) console.log('[Element] classList.toggle:', token, force);
+                    return false;
+                },
+                contains: function (token) {
+                    if (shouldLog) console.log('[Element] classList.contains:', token);
+                    return false;
+                },
+                replace: function (oldToken, newToken) {
+                    if (shouldLog) console.log('[Element] classList.replace:', oldToken, newToken);
+                },
+                length: 0
+            };
+
+            // style
+            element.style = {
+                cssText: '',
+                getPropertyValue: function (property) {
+                    if (shouldLog) console.log('[Element] style.getPropertyValue:', property);
+                    return '';
+                },
+                setProperty: function (property, value, priority) {
+                    if (shouldLog) console.log('[Element] style.setProperty:', property, value, priority);
+                },
+                removeProperty: function (property) {
+                    if (shouldLog) console.log('[Element] style.removeProperty:', property);
+                },
+                item: function (index) {
+                    if (shouldLog) console.log('[Element] style.item:', index);
+                    return '';
+                },
+                length: 0
+            };
+
+            // DOM 操作方法
+            element.appendChild = function (child) {
+                performanceMonitor.recordApiCall('element.appendChild');
+                this.childNodes.push(child);
+                if (child.nodeType === 1) { // ELEMENT_NODE
+                    this.children.push(child);
+                    this.lastElementChild = child;
+                    if (!this.firstElementChild) {
+                        this.firstElementChild = child;
+                    }
+                }
+                child.parentNode = this;
+                child.parentElement = this.nodeType === 1 ? this : null;
+                this.lastChild = child;
+                if (!this.firstChild) {
+                    this.firstChild = child;
+                }
+                // 更新兄弟节点关系
+                if (this.childNodes.length > 1) {
+                    const prevChild = this.childNodes[this.childNodes.length - 2];
+                    prevChild.nextSibling = child;
+                    child.previousSibling = prevChild;
+                }
+                return child;
+            };
+
+            element.removeChild = function (child) {
+                performanceMonitor.recordApiCall('element.removeChild');
+                const index = this.childNodes.indexOf(child);
+                if (index !== -1) {
+                    this.childNodes.splice(index, 1);
+                    if (child.nodeType === 1) {
+                        const elemIndex = this.children.indexOf(child);
+                        if (elemIndex !== -1) {
+                            this.children.splice(elemIndex, 1);
+                        }
+                        // 更新 first/last ElementChild
+                        this.firstElementChild = this.children[0] || null;
+                        this.lastElementChild = this.children[this.children.length - 1] || null;
+                    }
+                    child.parentNode = null;
+                    child.parentElement = null;
+                    // 更新兄弟节点关系
+                    if (child.previousSibling) {
+                        child.previousSibling.nextSibling = child.nextSibling;
+                    }
+                    if (child.nextSibling) {
+                        child.nextSibling.previousSibling = child.previousSibling;
+                    }
+                    child.nextSibling = null;
+                    child.previousSibling = null;
+                    // 更新 first/last Child
+                    this.firstChild = this.childNodes[0] || null;
+                    this.lastChild = this.childNodes[this.childNodes.length - 1] || null;
+                }
+                return child;
+            };
+
+            element.insertBefore = function (newChild, referenceChild) {
+                performanceMonitor.recordApiCall('element.insertBefore');
+                if (!referenceChild) {
+                    return this.appendChild(newChild);
+                }
+                const index = this.childNodes.indexOf(referenceChild);
+                if (index !== -1) {
+                    this.childNodes.splice(index, 0, newChild);
+                    if (newChild.nodeType === 1) {
+                        const elemIndex = this.children.indexOf(referenceChild);
+                        if (elemIndex !== -1) {
+                            this.children.splice(elemIndex, 0, newChild);
+                        }
+                    }
+                    newChild.parentNode = this;
+                    newChild.parentElement = this.nodeType === 1 ? this : null;
+                    // 更新兄弟节点关系
+                    newChild.nextSibling = referenceChild;
+                    newChild.previousSibling = referenceChild.previousSibling;
+                    if (referenceChild.previousSibling) {
+                        referenceChild.previousSibling.nextSibling = newChild;
+                    }
+                    referenceChild.previousSibling = newChild;
+                }
+                return newChild;
+            };
+
+            element.replaceChild = function (newChild, oldChild) {
+                performanceMonitor.recordApiCall('element.replaceChild');
+                this.insertBefore(newChild, oldChild);
+                return this.removeChild(oldChild);
+            };
+
+            element.cloneNode = function (deep) {
+                performanceMonitor.recordApiCall('element.cloneNode');
+                const clone = document.createElement(this.tagName);
+                // 复制属性
+                clone.id = this.id;
+                clone.className = this.className;
+                clone.textContent = deep ? this.textContent : '';
+                // 简化实现，不复制所有属性和子节点
+                return clone;
+            };
+
+            // 属性操作
+            element.getAttribute = function (name) {
+                performanceMonitor.recordApiCall('element.getAttribute');
+                return this.attributes.getNamedItem(name)?.value || null;
+            };
+
+            element.setAttribute = function (name, value) {
+                performanceMonitor.recordApiCall('element.setAttribute');
+                const attr = document.createAttribute(name);
+                attr.value = String(value);
+                this.attributes.setNamedItem(attr);
+                // 特殊属性处理
+                if (name === 'id') {
+                    this.id = value;
+                } else if (name === 'class') {
+                    this.className = value;
+                }
+            };
+
+            element.removeAttribute = function (name) {
+                performanceMonitor.recordApiCall('element.removeAttribute');
+                this.attributes.removeNamedItem(name);
+                if (name === 'id') {
+                    this.id = '';
+                } else if (name === 'class') {
+                    this.className = '';
+                }
+            };
+
+            element.hasAttribute = function (name) {
+                performanceMonitor.recordApiCall('element.hasAttribute');
+                return this.attributes.getNamedItem(name) !== null;
+            };
+
+            element.getAttributeNames = function () {
+                performanceMonitor.recordApiCall('element.getAttributeNames');
+                return Object.keys(this.attributes).filter(k => k !== 'length' && typeof this.attributes[k] !== 'function');
+            };
+
+            // 查询方法
+            element.querySelector = function (selectors) {
+                performanceMonitor.recordApiCall('element.querySelector');
+                console.log('[Element] querySelector:', selectors);
+                return null;
+            };
+
+            element.querySelectorAll = function (selectors) {
+                performanceMonitor.recordApiCall('element.querySelectorAll');
+                console.log('[Element] querySelectorAll:', selectors);
+                return createNodeList([]);
+            };
+
+            element.getElementsByTagName = function (tagName) {
+                performanceMonitor.recordApiCall('element.getElementsByTagName');
+                console.log('[Element] getElementsByTagName:', tagName);
+                return createHTMLCollection([]);
+            };
+
+            element.getElementsByClassName = function (classNames) {
+                performanceMonitor.recordApiCall('element.getElementsByClassName');
+                console.log('[Element] getElementsByClassName:', classNames);
+                return createHTMLCollection([]);
+            };
+
+            // 匹配方法
+            element.matches = function (selectors) {
+                performanceMonitor.recordApiCall('element.matches');
+                console.log('[Element] matches:', selectors);
+                return false;
+            };
+
+            element.closest = function (selectors) {
+                performanceMonitor.recordApiCall('element.closest');
+                console.log('[Element] closest:', selectors);
+                return null;
+            };
+
+            // 焦点方法
+            element.focus = function (options) {
+                performanceMonitor.recordApiCall('element.focus');
+                console.log('[Element] focus:', options);
+                document.activeElement = this;
+            };
+
+            element.blur = function () {
+                performanceMonitor.recordApiCall('element.blur');
+                console.log('[Element] blur');
+                if (document.activeElement === this) {
+                    document.activeElement = null;
+                }
+            };
+
+            // 滚动方法
+            element.scrollIntoView = function (options) {
+                performanceMonitor.recordApiCall('element.scrollIntoView');
+                console.log('[Element] scrollIntoView:', options);
+            };
+
+            element.scrollTo = function (x, y) {
+                performanceMonitor.recordApiCall('element.scrollTo');
+                if (typeof x === 'object') {
+                    this.scrollLeft = x.left || 0;
+                    this.scrollTop = x.top || 0;
+                } else {
+                    this.scrollLeft = x || 0;
+                    this.scrollTop = y || 0;
+                }
+            };
+
+            element.scrollBy = function (x, y) {
+                performanceMonitor.recordApiCall('element.scrollBy');
+                if (typeof x === 'object') {
+                    this.scrollLeft += x.left || 0;
+                    this.scrollTop += x.top || 0;
+                } else {
+                    this.scrollLeft += x || 0;
+                    this.scrollTop += y || 0;
+                }
+            };
+
+            // 边界框方法
+            element.getBoundingClientRect = function () {
+                performanceMonitor.recordApiCall('element.getBoundingClientRect');
+                return {
+                    top: this.offsetTop,
+                    left: this.offsetLeft,
+                    width: this.offsetWidth,
+                    height: this.offsetHeight,
+                    right: this.offsetLeft + this.offsetWidth,
+                    bottom: this.offsetTop + this.offsetHeight,
+                    x: this.offsetLeft,
+                    y: this.offsetTop
+                };
+            };
+
+            element.getClientRects = function () {
+                performanceMonitor.recordApiCall('element.getClientRects');
+                return [this.getBoundingClientRect()];
+            };
+
+            // 事件方法
+            element.addEventListener = function (type, listener, options) {
+                performanceMonitor.recordApiCall('element.addEventListener');
+                console.log('[Element] addEventListener:', type, typeof listener, options);
+            };
+
+            element.removeEventListener = function (type, listener, options) {
+                performanceMonitor.recordApiCall('element.removeEventListener');
+                console.log('[Element] removeEventListener:', type, typeof listener, options);
+            };
+
+            element.dispatchEvent = function (event) {
+                performanceMonitor.recordApiCall('element.dispatchEvent');
+                console.log('[Element] dispatchEvent:', event.type);
+                return true;
+            };
+
+            // 支持 canvas.getContext
+            if (element.tagName === 'CANVAS') {
+                element.getContext = function (type) {
+                    if (type === '2d') {
+                        return {
+                            fillRect: function () {
+                            },
+                            strokeRect: function () {
+                            },
+                            clearRect: function () {
+                            },
+                            fillText: function () {
+                            },
+                            strokeText: function () {
+                            },
+                            measureText: function (text) {
+                                return {width: text.length * 8};
+                            },
+                            beginPath: function () {
+                            },
+                            moveTo: function () {
+                            },
+                            lineTo: function () {
+                            },
+                            arc: function () {
+                            },
+                            fill: function () {
+                            },
+                            stroke: function () {
+                            },
+                            save: function () {
+                            },
+                            restore: function () {
+                            },
+                            translate: function () {
+                            },
+                            rotate: function () {
+                            },
+                            scale: function () {
+                            },
+                            getImageData: function () {
+                                return {data: new Uint8ClampedArray(0)};
+                            },
+                            putImageData: function () {
+                            },
+                            createImageData: function () {
+                                return {data: new Uint8ClampedArray(0)};
+                            }
+                        };
+                    }
+                    return null;
+                };
+            }
+
             // 支持 canvas.getContext
             if (element.tagName === 'CANVAS') {
                 if (globalObj.HTMLCanvasElement && globalObj.HTMLCanvasElement.prototype) {
@@ -1591,8 +2288,9 @@ const smartConfig = config.getSmartConfig();
                 }
             }
             return element;
-        }
-        
+        } // createElement 结束
+
+        // 创建document对象
         const document = {
             // DOM Node 属性
             nodeType: 9, // DOCUMENT_NODE
@@ -1601,7 +2299,7 @@ const smartConfig = config.getSmartConfig();
             ownerDocument: null,
             parentNode: null,
             childNodes: [],
-            
+
             // Document 基本属性
             documentElement: createElement('html'),
             head: createElement('head'),
@@ -1611,13 +2309,13 @@ const smartConfig = config.getSmartConfig();
             URL: smartConfig.location.href,
             documentURI: smartConfig.location.href,
             baseURI: smartConfig.location.href,
-            
+
             // 字符编码
             characterSet: smartConfig.document.characterSet,
             charset: smartConfig.document.characterSet,
             inputEncoding: smartConfig.document.characterSet,
             encoding: smartConfig.document.characterSet,
-            
+
             // 文档属性
             contentType: 'text/html',
             doctype: {
@@ -1629,31 +2327,31 @@ const smartConfig = config.getSmartConfig();
             compatMode: 'CSS1Compat', // 标准模式
             readyState: 'complete',
             lastModified: new Date().toUTCString(),
-            
+
             // 可见性API
             visibilityState: 'visible',
             hidden: false,
-            
+
             // Cookie和引用
             cookie: '',
             referrer: '',
             location: globalObj.location,
             defaultView: null, // 将在后面设置为window
-            
+
             // 当前聚焦元素
             activeElement: null,
-            
+
             // 样式表
             styleSheets: createHTMLCollection([]),
-            
+
             // 设计模式
             designMode: 'off',
-            
+
             // 滚动元素
             get scrollingElement() {
                 return this.documentElement;
             },
-            
+
             // 集合
             get images() { return createHTMLCollection([]); },
             get embeds() { return createHTMLCollection([]); },
@@ -1664,7 +2362,7 @@ const smartConfig = config.getSmartConfig();
             get anchors() { return createHTMLCollection([]); },
             get applets() { return createHTMLCollection([]); },
             get all() { return createHTMLCollection([]); },
-            
+
             // DOM查询方法
             getElementById: function(id) {
                 performanceMonitor.recordApiCall('document.getElementById');
@@ -1696,7 +2394,7 @@ const smartConfig = config.getSmartConfig();
                 console.log('[Document] querySelectorAll:', selectors);
                 return createNodeList([]);
             },
-            
+
             // 范围查询
             elementFromPoint: function(x, y) {
                 performanceMonitor.recordApiCall('document.elementFromPoint');
@@ -1708,7 +2406,7 @@ const smartConfig = config.getSmartConfig();
                 console.log('[Document] elementsFromPoint:', x, y);
                 return createNodeList([]);
             },
-            
+
             // 获取元素盒模型信息
             getBoxQuads: function(options) {
                 performanceMonitor.recordApiCall('document.getBoxQuads');
@@ -1720,18 +2418,18 @@ const smartConfig = config.getSmartConfig();
                 performanceMonitor.recordApiCall('document.createElement');
                 console.log('[Document] createElement:', tagName, options);
                 const element = createElement(tagName);
-                
+
                 // 设置 ownerDocument
                 element.ownerDocument = this;
-                
+
                 // 处理自定义元素选项
                 if (options && options.is) {
                     element.setAttribute('is', options.is);
                 }
-                
+
                 return element;
             },
-            
+
             createElementNS: function(namespaceURI, qualifiedName, options) {
                 performanceMonitor.recordApiCall('document.createElementNS');
                 console.log('[Document] createElementNS:', namespaceURI, qualifiedName, options);
@@ -1739,7 +2437,7 @@ const smartConfig = config.getSmartConfig();
                 element.namespaceURI = namespaceURI;
                 return element;
             },
-            
+
             createTextNode: function(data) {
                 performanceMonitor.recordApiCall('document.createTextNode');
                 console.log('[Document] createTextNode:', data);
@@ -1754,7 +2452,7 @@ const smartConfig = config.getSmartConfig();
                     parentNode: null,
                     nextSibling: null,
                     previousSibling: null,
-                    
+
                     // Text节点方法
                     splitText: function(offset) {
                         console.log('[TextNode] splitText:', offset);
@@ -1787,7 +2485,7 @@ const smartConfig = config.getSmartConfig();
                     }
                 };
             },
-            
+
             createDocumentFragment: function() {
                 performanceMonitor.recordApiCall('document.createDocumentFragment');
                 console.log('[Document] createDocumentFragment');
@@ -1799,7 +2497,7 @@ const smartConfig = config.getSmartConfig();
                     children: [],
                     ownerDocument: this,
                     parentNode: null,
-                    
+
                     // DocumentFragment方法
                     getElementById: function(id) {
                         return null; // 简化实现
@@ -1812,7 +2510,7 @@ const smartConfig = config.getSmartConfig();
                         console.log('[DocumentFragment] querySelectorAll:', selectors);
                         return createNodeList([]);
                     },
-                    
+
                     // 子节点操作
                     appendChild: function(child) {
                         this.childNodes.push(child);
@@ -1838,7 +2536,7 @@ const smartConfig = config.getSmartConfig();
                     }
                 };
             },
-            
+
             createComment: function(data) {
                 performanceMonitor.recordApiCall('document.createComment');
                 console.log('[Document] createComment:', data);
@@ -1854,7 +2552,7 @@ const smartConfig = config.getSmartConfig();
                     previousSibling: null
                 };
             },
-            
+
             createAttribute: function(name) {
                 performanceMonitor.recordApiCall('document.createAttribute');
                 console.log('[Document] createAttribute:', name);
@@ -1863,13 +2561,13 @@ const smartConfig = config.getSmartConfig();
                     value: '',
                     specified: true,
                     ownerElement: null,
-                    
+
                     get localName() { return this.name; },
                     get namespaceURI() { return null; },
                     get prefix() { return null; }
                 };
             },
-            
+
             createAttributeNS: function(namespaceURI, qualifiedName) {
                 performanceMonitor.recordApiCall('document.createAttributeNS');
                 console.log('[Document] createAttributeNS:', namespaceURI, qualifiedName);
@@ -1877,7 +2575,7 @@ const smartConfig = config.getSmartConfig();
                 attr.namespaceURI = namespaceURI;
                 return attr;
             },
-            
+
             // Range API
             createRange: function() {
                 performanceMonitor.recordApiCall('document.createRange');
@@ -1889,7 +2587,7 @@ const smartConfig = config.getSmartConfig();
                     endOffset: 0,
                     collapsed: true,
                     commonAncestorContainer: this,
-                    
+
                     setStart: function(node, offset) {
                         this.startContainer = node;
                         this.startOffset = offset;
@@ -1923,7 +2621,7 @@ const smartConfig = config.getSmartConfig();
                     toString: function() { return ''; }
                 };
             },
-            
+
             // TreeWalker API
             createTreeWalker: function(root, whatToShow, filter) {
                 performanceMonitor.recordApiCall('document.createTreeWalker');
@@ -1933,7 +2631,7 @@ const smartConfig = config.getSmartConfig();
                     whatToShow: whatToShow || 0xFFFFFFFF,
                     filter: filter || null,
                     currentNode: root || this.documentElement,
-                    
+
                     nextNode: function() { return null; },
                     previousNode: function() { return null; },
                     firstChild: function() { return null; },
@@ -1943,7 +2641,7 @@ const smartConfig = config.getSmartConfig();
                     previousSibling: function() { return null; }
                 };
             },
-            
+
             // NodeIterator API
             createNodeIterator: function(root, whatToShow, filter) {
                 performanceMonitor.recordApiCall('document.createNodeIterator');
@@ -1954,7 +2652,7 @@ const smartConfig = config.getSmartConfig();
                     filter: filter || null,
                     referenceNode: root || this.documentElement,
                     pointerBeforeReferenceNode: true,
-                    
+
                     nextNode: function() { return null; },
                     previousNode: function() { return null; }
                 };
@@ -2018,7 +2716,7 @@ const smartConfig = config.getSmartConfig();
                 console.log('[Document] execCommand:', commandId, showUI, value);
                 return true;
             },
-            
+
             // 导入节点
             importNode: function(node, deep) {
                 performanceMonitor.recordApiCall('document.importNode');
@@ -2031,7 +2729,7 @@ const smartConfig = config.getSmartConfig();
                 }
                 return node;
             },
-            
+
             // 采用节点
             adoptNode: function(node) {
                 performanceMonitor.recordApiCall('document.adoptNode');
@@ -2041,100 +2739,100 @@ const smartConfig = config.getSmartConfig();
                 }
                 return node;
             },
-            
+
             // 标准化文档
             normalizeDocument: function() {
                 performanceMonitor.recordApiCall('document.normalizeDocument');
                 console.log('[Document] normalizeDocument');
             },
-            
+
             // 重命名节点
             renameNode: function(node, namespaceURI, qualifiedName) {
                 performanceMonitor.recordApiCall('document.renameNode');
                 console.log('[Document] renameNode:', node, namespaceURI, qualifiedName);
                 return node;
             },
-            
+
             // DOM Content Loaded
             _fireContentLoaded: function() {
                 const event = this.createEvent('Event');
                 event.initEvent('DOMContentLoaded', true, true);
                 this.dispatchEvent(event);
             },
-            
+
             // 全屏API
             exitFullscreen: function() {
                 performanceMonitor.recordApiCall('document.exitFullscreen');
                 console.log('[Document] exitFullscreen');
                 return Promise.resolve();
             },
-            
+
             get fullscreenElement() {
                 return null;
             },
-            
+
             get fullscreenEnabled() {
                 return true;
             },
-            
+
             // 指针锁定API
             exitPointerLock: function() {
                 performanceMonitor.recordApiCall('document.exitPointerLock');
                 console.log('[Document] exitPointerLock');
             },
-            
+
             get pointerLockElement() {
                 return null;
             },
-            
+
             // Picture-in-Picture API
             exitPictureInPicture: function() {
                 performanceMonitor.recordApiCall('document.exitPictureInPicture');
                 console.log('[Document] exitPictureInPicture');
                 return Promise.resolve();
             },
-            
+
             get pictureInPictureElement() {
                 return null;
             },
-            
+
             get pictureInPictureEnabled() {
                 return true;
             },
-            
+
             // 剪贴板API（已过时，但仍存在）
             queryCommandEnabled: function(commandId) {
                 console.log('[Document] queryCommandEnabled:', commandId);
                 return false;
             },
-            
+
             queryCommandIndeterm: function(commandId) {
                 console.log('[Document] queryCommandIndeterm:', commandId);
                 return false;
             },
-            
+
             queryCommandState: function(commandId) {
                 console.log('[Document] queryCommandState:', commandId);
                 return false;
             },
-            
+
             queryCommandSupported: function(commandId) {
                 console.log('[Document] queryCommandSupported:', commandId);
                 return false;
             },
-            
+
             queryCommandValue: function(commandId) {
                 console.log('[Document] queryCommandValue:', commandId);
                 return '';
             }
         };
-        
+
                         // 设置循环引用和关系 - 这里不能使用 globalObj.window，因为还没创建
                 // document.defaultView 将在 Window 补丁中设置
         document.documentElement.ownerDocument = document;
         document.head.ownerDocument = document;
         document.body.ownerDocument = document;
-        
+
         // 建立DOM树结构
         document.documentElement.appendChild = function(child) {
             this.childNodes = this.childNodes || [];
@@ -2147,28 +2845,28 @@ const smartConfig = config.getSmartConfig();
             child.ownerDocument = document;
             return child;
         };
-        
+
         // 将head和body添加到documentElement
         document.documentElement.appendChild(document.head);
         document.documentElement.appendChild(document.body);
-        
+
         // 设置到全局对象
         globalObj.document = document;
-        
+
         patchStatus.document = true;
         performanceMonitor.endTimer('document');
         console.log('✓ Document补丁加载成功');
-        
+
     } catch (e) {
         performanceMonitor.recordError(e, 'Document补丁加载');
         console.error('✗ Document补丁加载失败:', e.message);
     }
-    
+
     // 加载Window补丁
     try {
         performanceMonitor.startTimer('window');
         console.log('正在加载Window补丁...');
-        
+
         // 创建Event对象
         function createEvent(type, options = {}) {
             return {
@@ -2197,7 +2895,7 @@ const smartConfig = config.getSmartConfig();
                 }
             };
         }
-        
+
         // 创建Window对象
         const window = {
             // 基本属性
@@ -2212,7 +2910,7 @@ const smartConfig = config.getSmartConfig();
             window: null,
             status: '',
             defaultStatus: '',
-            
+
             // 窗口状态
             fullScreen: false,
             menubar: { visible: true },
@@ -2221,7 +2919,7 @@ const smartConfig = config.getSmartConfig();
             personalbar: { visible: true },
             scrollbars: { visible: true },
             statusbar: { visible: true },
-            
+
             // 窗口尺寸和位置（只读属性）
             get availHeight() { return smartConfig.window.innerHeight; },
             get availWidth() { return smartConfig.window.innerWidth; },
@@ -2239,7 +2937,7 @@ const smartConfig = config.getSmartConfig();
                     }
                 };
             },
-            
+
             // 屏幕信息
             screenX: 0,
             screenY: 0,
@@ -2254,7 +2952,7 @@ const smartConfig = config.getSmartConfig();
             pageYOffset: 0,
             scrollX: 0,
             scrollY: 0,
-            
+
             // 引用其他对象
             document: globalObj.document,
             location: globalObj.location,
@@ -2285,7 +2983,7 @@ const smartConfig = config.getSmartConfig();
                 removeItem: function(key) { console.log('[SessionStorage] removeItem:', key); },
                 setItem: function(key, value) { console.log('[SessionStorage] setItem:', key, value); }
             },
-            
+
             // 定时器
             setTimeout: function(callback, delay, ...args) {
                 console.log('[Window] setTimeout:', delay);
@@ -2303,7 +3001,7 @@ const smartConfig = config.getSmartConfig();
                 console.log('[Window] clearInterval:', id);
                 return clearInterval(id);
             },
-            
+
             // 动画帧
             requestAnimationFrame: function(callback) {
                 console.log('[Window] requestAnimationFrame');
@@ -2313,7 +3011,7 @@ const smartConfig = config.getSmartConfig();
                 console.log('[Window] cancelAnimationFrame:', id);
                 return clearTimeout(id);
             },
-            
+
             // 事件相关
             addEventListener: function(type, listener, options) {
                 console.log('[Window] addEventListener:', type, listener, options);
@@ -2325,7 +3023,7 @@ const smartConfig = config.getSmartConfig();
                 console.log('[Window] dispatchEvent:', event);
                 return true;
             },
-            
+
             // 弹窗相关
             alert: function(message) {
                 console.log('[Window] alert:', message);
@@ -2338,7 +3036,7 @@ const smartConfig = config.getSmartConfig();
                 console.log('[Window] prompt:', message, defaultText);
                 return defaultText || '';
             },
-            
+
             // 窗口操作
             open: function(url, target, features) {
                 console.log('[Window] open:', url, target, features);
@@ -2353,12 +3051,12 @@ const smartConfig = config.getSmartConfig();
             blur: function() {
                 console.log('[Window] blur');
             },
-            
+
             // 滚动相关（兼容旧版本）
             scroll: function(x, y) {
                 return this.scrollTo(x, y);
             },
-            
+
             // 匹配媒体
             matchMedia: function(query) {
                 console.log('[Window] matchMedia:', query);
@@ -2370,7 +3068,7 @@ const smartConfig = config.getSmartConfig();
                     removeListener: function() {}
                 };
             },
-            
+
             // 编码解码API
             btoa: function(string) {
                 performanceMonitor.recordApiCall('window.btoa');
@@ -2380,7 +3078,7 @@ const smartConfig = config.getSmartConfig();
                 performanceMonitor.recordApiCall('window.atob');
                 return Buffer.from(string, 'base64').toString('binary');
             },
-            
+
             // URL API
             URL: globalObj.URL || function(url, base) {
                 performanceMonitor.recordApiCall('window.URL');
@@ -2390,7 +3088,7 @@ const smartConfig = config.getSmartConfig();
                 performanceMonitor.recordApiCall('window.URLSearchParams');
                 return new URLSearchParams(init);
             },
-            
+
             // Fetch API
             fetch: globalObj.fetch || function(url, options) {
                 performanceMonitor.recordApiCall('window.fetch');
@@ -2407,10 +3105,10 @@ const smartConfig = config.getSmartConfig();
                     clone: function() { return this; }
                 });
             },
-            
+
             // 控制台API
             console: globalObj.console,
-            
+
             // 事件API增强
             Event: function(type, eventInitDict = {}) {
                 performanceMonitor.recordApiCall('window.Event');
@@ -2422,7 +3120,7 @@ const smartConfig = config.getSmartConfig();
                 event.detail = eventInitDict.detail;
                 return event;
             },
-            
+
             // 消息传递API
             postMessage: function(message, targetOrigin, transfer) {
                 performanceMonitor.recordApiCall('window.postMessage');
@@ -2441,7 +3139,7 @@ const smartConfig = config.getSmartConfig();
                     }
                 }, 0);
             },
-            
+
             // 窗口操作增强
             moveBy: function(deltaX, deltaY) {
                 performanceMonitor.recordApiCall('window.moveBy');
@@ -2467,26 +3165,26 @@ const smartConfig = config.getSmartConfig();
                 this.innerWidth = width;
                 this.innerHeight = height;
             },
-            
+
             // 打印API
             print: function() {
                 performanceMonitor.recordApiCall('window.print');
                 console.log('[Window] print');
             },
-            
+
             // 停止加载
             stop: function() {
                 performanceMonitor.recordApiCall('window.stop');
                 console.log('[Window] stop');
             },
-            
+
             // 查找API
             find: function(string, caseSensitive, backwards, wrapAround, wholeWord, searchInFrames, showDialog) {
                 performanceMonitor.recordApiCall('window.find');
                 console.log('[Window] find:', string);
                 return false;
             },
-            
+
             // 选择API
             getSelection: function() {
                 performanceMonitor.recordApiCall('window.getSelection');
@@ -2506,7 +3204,7 @@ const smartConfig = config.getSmartConfig();
                     toString: function() { return ''; }
                 };
             },
-            
+
             // 滚动API增强
             scrollTo: function(x, y) {
                 if (typeof x === 'object') {
@@ -2525,7 +3223,7 @@ const smartConfig = config.getSmartConfig();
                 this.pageXOffset = this.scrollX;
                 this.pageYOffset = this.scrollY;
             },
-            
+
             scrollBy: function(x, y) {
                 if (typeof x === 'object') {
                     // ScrollToOptions
@@ -2543,12 +3241,12 @@ const smartConfig = config.getSmartConfig();
                 this.pageXOffset = this.scrollX;
                 this.pageYOffset = this.scrollY;
             },
-            
+
             // 获取元素位置
             getComputedStyle: function(element, pseudoElement) {
                 performanceMonitor.recordApiCall('window.getComputedStyle');
                 console.log('[Window] getComputedStyle:', element?.tagName, pseudoElement);
-                
+
                 // 创建更完整的CSSStyleDeclaration模拟
                 const computedStyle = {
                     // 常用CSS属性的默认值
@@ -2576,7 +3274,7 @@ const smartConfig = config.getSmartConfig();
                     overflow: 'visible',
                     float: 'none',
                     clear: 'none',
-                    
+
                     // 方法
                     getPropertyValue: function(property) {
                         return this[property] || '';
@@ -2590,41 +3288,41 @@ const smartConfig = config.getSmartConfig();
                     },
                     setProperty: function() {},
                     removeProperty: function() {},
-                    
+
                     get length() {
                         return Object.keys(this).filter(key => typeof this[key] === 'string').length;
                     }
                 };
-                
+
                 return computedStyle;
             },
-            
+
             // 引用自身
             self: null,
             window: null
         };
-        
+
         // 设置循环引用
         window.self = window;
         window.window = window;
-        
+
         // 设置 document 的 defaultView 引用
         if (globalObj.document) {
             globalObj.document.defaultView = window;
         }
-        
+
         // 设置到全局对象
         globalObj.window = window;
-        
+
         patchStatus.window = true;
         performanceMonitor.endTimer('window');
         console.log('✓ Window补丁加载成功');
-        
+
     } catch (e) {
         performanceMonitor.recordError(e, 'Window补丁加载');
         console.error('✗ Window补丁加载失败:', e.message);
     }
-    
+
     // 定义全局 Element/HTMLElement/HTMLCanvasElement 构造函数
     function Element() {}
     Element.prototype = {};
@@ -3220,9 +3918,12 @@ const smartConfig = config.getSmartConfig();
     }
     
     // 插件系统
-    const pluginSystem = {
+    const pluginManager = {
         plugins: new Map(),
         hooks: new Map(),
+        middleware: new Map(),
+        extensions: new Map(),
+        lifecycle: new Map(),
         
         // 注册插件
         register(name, plugin) {
@@ -3230,62 +3931,250 @@ const smartConfig = config.getSmartConfig();
                 throw new Error('插件必须是包含init方法的对象');
             }
             
+            // 检查插件依赖
+            if (plugin.dependencies) {
+                for (const dep of plugin.dependencies) {
+                    if (!this.plugins.has(dep)) {
+                        throw new Error(`插件 "${name}" 依赖插件 "${dep}" 未注册`);
+                    }
+                }
+            }
+            
             this.plugins.set(name, plugin);
             
+            // 注册生命周期钩子
+            if (plugin.lifecycle) {
+                this.lifecycle.set(name, plugin.lifecycle);
+            }
+            
             try {
-                plugin.init({
+                const context = {
                     globalObj,
                     performanceMonitor,
                     config: smartConfig,
                     registerHook: this.registerHook.bind(this),
-                    triggerHook: this.triggerHook.bind(this)
-                });
+                    triggerHook: this.triggerHook.bind(this),
+                    registerMiddleware: this.registerMiddleware.bind(this),
+                    registerExtension: this.registerExtension.bind(this),
+                    getPlugin: this.getPlugin.bind(this),
+                    getPlugins: this.getPlugins.bind(this),
+                    utils: {
+                        createElement: createElement,
+                        createEvent: createEvent,
+                        createHTMLCollection: createHTMLCollection,
+                        createNodeList: createNodeList
+                    }
+                };
+                
+                plugin.init(context);
                 console.log(`✓ 插件 "${name}" 注册成功`);
+                
+                // 触发插件注册后钩子
+                this.triggerHook('pluginRegistered', name, plugin);
             } catch (e) {
                 performanceMonitor.recordError(e, `插件注册: ${name}`);
                 console.error(`✗ 插件 "${name}" 注册失败:`, e.message);
+                this.plugins.delete(name);
+                throw e;
             }
         },
         
         // 注册钩子
-        registerHook(hookName, callback) {
+        registerHook(hookName, callback, priority = 0) {
             if (!this.hooks.has(hookName)) {
                 this.hooks.set(hookName, []);
             }
-            this.hooks.get(hookName).push(callback);
+            const hook = { callback, priority };
+            this.hooks.get(hookName).push(hook);
+            // 按优先级排序
+            this.hooks.get(hookName).sort((a, b) => b.priority - a.priority);
         },
         
         // 触发钩子
         triggerHook(hookName, ...args) {
-            const callbacks = this.hooks.get(hookName);
-            if (callbacks) {
-                callbacks.forEach(callback => {
+            const hooks = this.hooks.get(hookName);
+            if (hooks) {
+                const results = [];
+                for (const hook of hooks) {
                     try {
-                        callback(...args);
+                        const result = hook.callback(...args);
+                        if (result !== undefined) {
+                            results.push(result);
+                        }
                     } catch (e) {
                         performanceMonitor.recordError(e, `钩子执行: ${hookName}`);
                     }
-                });
+                }
+                return results;
             }
+            return [];
+        },
+        
+        // 注册中间件
+        registerMiddleware(name, middleware) {
+            if (typeof middleware !== 'function') {
+                throw new Error('中间件必须是函数');
+            }
+            this.middleware.set(name, middleware);
+        },
+        
+        // 执行中间件链
+        executeMiddleware(chain, context, ...args) {
+            let index = 0;
+            
+            const next = () => {
+                if (index >= chain.length) return;
+                
+                const middlewareName = chain[index++];
+                const middleware = this.middleware.get(middlewareName);
+                
+                if (middleware) {
+                    return middleware(context, next, ...args);
+                } else {
+                    return next();
+                }
+            };
+            
+            return next();
+        },
+        
+        // 注册扩展
+        registerExtension(target, name, implementation) {
+            if (!this.extensions.has(target)) {
+                this.extensions.set(target, new Map());
+            }
+            this.extensions.get(target).set(name, implementation);
+        },
+        
+        // 应用扩展
+        applyExtensions(target, name, ...args) {
+            const extensions = this.extensions.get(target);
+            if (extensions && extensions.has(name)) {
+                return extensions.get(name)(...args);
+            }
+            return null;
+        },
+        
+        // 获取插件
+        getPlugin(name) {
+            return this.plugins.get(name);
+        },
+        
+        // 获取所有插件
+        getPlugins() {
+            return Array.from(this.plugins.entries());
         },
         
         // 卸载插件
         unregister(name) {
             const plugin = this.plugins.get(name);
-            if (plugin && typeof plugin.destroy === 'function') {
-                try {
-                    plugin.destroy();
-                } catch (e) {
-                    performanceMonitor.recordError(e, `插件卸载: ${name}`);
+            if (plugin) {
+                // 触发插件卸载前钩子
+                this.triggerHook('pluginUnregistering', name, plugin);
+                
+                if (typeof plugin.destroy === 'function') {
+                    try {
+                        plugin.destroy();
+                    } catch (e) {
+                        performanceMonitor.recordError(e, `插件卸载: ${name}`);
+                    }
                 }
+                
+                this.plugins.delete(name);
+                this.lifecycle.delete(name);
+                console.log(`✓ 插件 "${name}" 已卸载`);
+                
+                // 触发插件卸载后钩子
+                this.triggerHook('pluginUnregistered', name);
             }
-            this.plugins.delete(name);
-            console.log(`✓ 插件 "${name}" 已卸载`);
         },
         
         // 获取插件列表
         list() {
             return Array.from(this.plugins.keys());
+        },
+        
+        // 获取插件信息
+        getPluginInfo(name) {
+            const plugin = this.plugins.get(name);
+            if (!plugin) return null;
+            
+            return {
+                name,
+                version: plugin.version || '1.0.0',
+                description: plugin.description || '',
+                author: plugin.author || '',
+                dependencies: plugin.dependencies || [],
+                hooks: plugin.lifecycle ? Object.keys(plugin.lifecycle) : [],
+                hasMiddleware: this.middleware.has(name),
+                hasExtensions: this.extensions.has(name)
+            };
+        },
+        
+        // 检查插件依赖
+        checkDependencies() {
+            const issues = [];
+            
+            for (const [name, plugin] of this.plugins) {
+                if (plugin.dependencies) {
+                    for (const dep of plugin.dependencies) {
+                        if (!this.plugins.has(dep)) {
+                            issues.push({
+                                plugin: name,
+                                missing: dep,
+                                type: 'dependency'
+                            });
+                        }
+                    }
+                }
+            }
+            
+            return issues;
+        },
+        
+        // 批量注册插件
+        registerBatch(plugins) {
+            const results = [];
+            
+            for (const [name, plugin] of Object.entries(plugins)) {
+                try {
+                    this.register(name, plugin);
+                    results.push({ name, status: 'success' });
+                } catch (e) {
+                    results.push({ name, status: 'error', error: e.message });
+                }
+            }
+            
+            return results;
+        },
+        
+        // 插件热重载
+        reload(name) {
+            const plugin = this.plugins.get(name);
+            if (plugin && typeof plugin.reload === 'function') {
+                try {
+                    plugin.reload();
+                    console.log(`✓ 插件 "${name}" 热重载成功`);
+                    return true;
+                } catch (e) {
+                    performanceMonitor.recordError(e, `插件热重载: ${name}`);
+                    console.error(`✗ 插件 "${name}" 热重载失败:`, e.message);
+                    return false;
+                }
+            }
+            return false;
+        },
+        
+        // 获取系统状态
+        getStatus() {
+            return {
+                plugins: this.plugins.size,
+                hooks: this.hooks.size,
+                middleware: this.middleware.size,
+                extensions: this.extensions.size,
+                lifecycle: this.lifecycle.size,
+                dependencies: this.checkDependencies()
+            };
         }
     };
     
@@ -3466,7 +4355,7 @@ const smartConfig = config.getSmartConfig();
         // 新增功能接口
         performance: performanceMonitor,
         benchmark: benchmarkTool,
-        plugins: pluginSystem,
+        plugins: pluginManager,
         debug: debugTools,
         
         // 便捷方法
@@ -3913,6 +4802,209 @@ const smartConfig = config.getSmartConfig();
         }
     };
     
+    // 模块化加载系统
+    const moduleLoader = {
+        modules: new Map(),
+        loaders: new Map(),
+        
+        // 注册模块加载器
+        registerLoader(type, loader) {
+            this.loaders.set(type, loader);
+        },
+        
+        // 加载模块
+        async loadModule(path, options = {}) {
+            const type = options.type || 'js';
+            const loader = this.loaders.get(type);
+            
+            if (!loader) {
+                throw new Error(`未找到类型 "${type}" 的加载器`);
+            }
+            
+            try {
+                const module = await loader(path, options);
+                this.modules.set(path, module);
+                return module;
+            } catch (e) {
+                performanceMonitor.recordError(e, `模块加载: ${path}`);
+                throw e;
+            }
+        },
+        
+        // 获取已加载的模块
+        getModule(path) {
+            return this.modules.get(path);
+        },
+        
+        // 卸载模块
+        unloadModule(path) {
+            const module = this.modules.get(path);
+            if (module && typeof module.destroy === 'function') {
+                module.destroy();
+            }
+            this.modules.delete(path);
+        },
+        
+        // 获取所有模块
+        getAllModules() {
+            return Array.from(this.modules.entries());
+        }
+    };
+    
+    // API扩展系统
+    const apiExtension = {
+        extensions: new Map(),
+        overrides: new Map(),
+        
+        // 扩展API
+        extend(target, name, implementation, options = {}) {
+            if (!this.extensions.has(target)) {
+                this.extensions.set(target, new Map());
+            }
+            
+            const extension = {
+                implementation,
+                options,
+                timestamp: Date.now()
+            };
+            
+            this.extensions.get(target).set(name, extension);
+            
+            // 如果目标对象存在，立即应用扩展
+            if (globalObj[target]) {
+                this.applyExtension(target, name);
+            }
+        },
+        
+        // 应用扩展
+        applyExtension(target, name) {
+            const extensions = this.extensions.get(target);
+            if (!extensions || !extensions.has(name)) return;
+            
+            const extension = extensions.get(name);
+            const targetObj = globalObj[target];
+            
+            if (targetObj && typeof targetObj === 'object') {
+                try {
+                    if (extension.options.override) {
+                        // 覆盖现有方法
+                        this.overrides.set(`${target}.${name}`, targetObj[name]);
+                        targetObj[name] = extension.implementation;
+                    } else {
+                        // 添加新方法
+                        targetObj[name] = extension.implementation;
+                    }
+                } catch (e) {
+                    performanceMonitor.recordError(e, `API扩展应用: ${target}.${name}`);
+                }
+            }
+        },
+        
+        // 恢复原始方法
+        restore(target, name) {
+            const original = this.overrides.get(`${target}.${name}`);
+            if (original && globalObj[target]) {
+                globalObj[target][name] = original;
+                this.overrides.delete(`${target}.${name}`);
+            }
+        },
+        
+        // 获取扩展列表
+        getExtensions(target) {
+            const extensions = this.extensions.get(target);
+            return extensions ? Array.from(extensions.keys()) : [];
+        },
+        
+        // 移除扩展
+        removeExtension(target, name) {
+            const extensions = this.extensions.get(target);
+            if (extensions && extensions.has(name)) {
+                this.restore(target, name);
+                extensions.delete(name);
+            }
+        }
+    };
+    
+    // 事件系统增强
+    const eventSystem = {
+        listeners: new Map(),
+        globalListeners: new Map(),
+        
+        // 添加全局事件监听器
+        addGlobalListener(event, listener, options = {}) {
+            if (!this.globalListeners.has(event)) {
+                this.globalListeners.set(event, []);
+            }
+            this.globalListeners.get(event).push({ listener, options });
+        },
+        
+        // 移除全局事件监听器
+        removeGlobalListener(event, listener) {
+            const listeners = this.globalListeners.get(event);
+            if (listeners) {
+                const index = listeners.findIndex(l => l.listener === listener);
+                if (index !== -1) {
+                    listeners.splice(index, 1);
+                }
+            }
+        },
+        
+        // 触发全局事件
+        triggerGlobalEvent(event, data) {
+            const listeners = this.globalListeners.get(event);
+            if (listeners) {
+                listeners.forEach(({ listener, options }) => {
+                    try {
+                        listener(data, options);
+                    } catch (e) {
+                        performanceMonitor.recordError(e, `全局事件: ${event}`);
+                    }
+                });
+            }
+        },
+        
+        // 获取事件统计
+        getEventStats() {
+            const stats = {};
+            for (const [event, listeners] of this.globalListeners) {
+                stats[event] = listeners.length;
+            }
+            return stats;
+        }
+    };
+    
+    // 配置热重载系统
+    const configHotReload = {
+        watchers: new Map(),
+        
+        // 监听配置变化
+        watchConfig(path, callback) {
+            this.watchers.set(path, callback);
+        },
+        
+        // 停止监听
+        unwatchConfig(path) {
+            this.watchers.delete(path);
+        },
+        
+        // 触发配置重载
+        reloadConfig(path) {
+            const callback = this.watchers.get(path);
+            if (callback) {
+                try {
+                    callback();
+                } catch (e) {
+                    performanceMonitor.recordError(e, `配置重载: ${path}`);
+                }
+            }
+        },
+        
+        // 获取监听器列表
+        getWatchers() {
+            return Array.from(this.watchers.keys());
+        }
+    };
+    
     // 扩展result对象
     result.security = securityFeatures;
     result.compatibility = compatibilityManager;
@@ -3921,6 +5013,67 @@ const smartConfig = config.getSmartConfig();
     result.securityCheck = securityCheck;
     result.testing = testingUtilities;
     result.configValidation = configValidation;
+    result.moduleLoader = moduleLoader;
+    result.apiExtension = apiExtension;
+    result.eventSystem = eventSystem;
+    result.configHotReload = configHotReload;
+    result.pluginManager = pluginManager;
+    
+    // 注册内置钩子
+    pluginManager.registerHook('beforeCreateElement', (tagName) => {
+        eventSystem.triggerGlobalEvent('element:beforeCreate', { tagName });
+    }, 10);
+    
+    pluginManager.registerHook('afterCreateElement', (element, tagName) => {
+        eventSystem.triggerGlobalEvent('element:afterCreate', { element, tagName });
+    }, 10);
+    
+    pluginManager.registerHook('beforeApiCall', (apiName, args) => {
+        eventSystem.triggerGlobalEvent('api:beforeCall', { apiName, args });
+    }, 10);
+    
+    pluginManager.registerHook('afterApiCall', (apiName, result) => {
+        eventSystem.triggerGlobalEvent('api:afterCall', { apiName, result });
+    }, 10);
+    
+    // 注册默认模块加载器
+    moduleLoader.registerLoader('js', async (path, options) => {
+        if (isNode && typeof require !== 'undefined') {
+            return require(path);
+        }
+        throw new Error('Node.js环境不支持动态模块加载');
+    });
+    
+    // 注册默认API扩展
+    apiExtension.extend('navigator', 'getDeviceInfo', () => {
+        return {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            hardwareConcurrency: navigator.hardwareConcurrency,
+            deviceMemory: navigator.deviceMemory,
+            timestamp: Date.now()
+        };
+    });
+    
+    apiExtension.extend('window', 'getBrowserInfo', () => {
+        return {
+            innerWidth: window.innerWidth,
+            innerHeight: window.innerHeight,
+            devicePixelRatio: window.devicePixelRatio,
+            userAgent: navigator.userAgent,
+            timestamp: Date.now()
+        };
+    });
+    
+    // 注册全局事件监听器
+    eventSystem.addGlobalListener('element:afterCreate', (data) => {
+        performanceMonitor.recordApiCall('createElement');
+    });
+    
+    eventSystem.addGlobalListener('api:beforeCall', (data) => {
+        performanceMonitor.recordApiCall(data.apiName);
+    });
     
     // 在Node.js环境中导出模块
     if (typeof module !== 'undefined' && module.exports) {
