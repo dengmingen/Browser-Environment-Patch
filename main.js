@@ -4,16 +4,420 @@
 (function() {
     'use strict';
     
+    // 智能环境检测和配置 - 性能优化版本
+    const isNode = typeof global !== 'undefined' && typeof process !== 'undefined';
+    const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
+    const globalObj = isNode ? global : (isBrowser ? window : this);
+    
+    // 如果在浏览器环境中，直接使用真实的浏览器API
+    if (isBrowser) {
+        console.log('=== 检测到浏览器环境，使用真实DOM API ===');
+        
+        // 在浏览器环境中，我们只需要确保一些基本的兼容性
+        // 大部分API已经由浏览器提供
+        
+        // 添加一些有用的工具函数到全局对象
+        window.domUtils = {
+            // 获取元素的所有属性
+            getAllAttributes: function(element) {
+                if (!element || !element.attributes) return {};
+                const attrs = {};
+                for (let i = 0; i < element.attributes.length; i++) {
+                    const attr = element.attributes[i];
+                    attrs[attr.name] = attr.value;
+                }
+                return attrs;
+            },
+            
+            // 获取元素的样式
+            getComputedStyles: function(element) {
+                if (!element) return {};
+                const styles = window.getComputedStyle(element);
+                const result = {};
+                for (let i = 0; i < styles.length; i++) {
+                    const property = styles[i];
+                    result[property] = styles.getPropertyValue(property);
+                }
+                return result;
+            },
+            
+            // 获取元素的位置信息
+            getElementPosition: function(element) {
+                if (!element) return null;
+                const rect = element.getBoundingClientRect();
+                return {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    x: rect.x,
+                    y: rect.y
+                };
+            },
+            
+            // 查找所有具有特定属性的元素
+            findElementsByAttribute: function(attributeName, attributeValue) {
+                const elements = document.querySelectorAll(`[${attributeName}]`);
+                if (attributeValue === undefined) {
+                    return Array.from(elements);
+                }
+                return Array.from(elements).filter(el => 
+                    el.getAttribute(attributeName) === attributeValue
+                );
+            },
+            
+            // 查找所有具有特定类的元素
+            findElementsByClass: function(className) {
+                return Array.from(document.getElementsByClassName(className));
+            },
+            
+            // 查找所有具有特定ID的元素（通常只有一个）
+            findElementById: function(id) {
+                return document.getElementById(id);
+            },
+            
+            // 获取元素的文本内容（包括子元素）
+            getTextContent: function(element) {
+                if (!element) return '';
+                return element.textContent || element.innerText || '';
+            },
+            
+            // 获取元素的HTML内容
+            getInnerHTML: function(element) {
+                if (!element) return '';
+                return element.innerHTML || '';
+            },
+            
+            // 获取元素的outerHTML
+            getOuterHTML: function(element) {
+                if (!element) return '';
+                return element.outerHTML || '';
+            },
+            
+            // 检查元素是否可见
+            isElementVisible: function(element) {
+                if (!element) return false;
+                const style = window.getComputedStyle(element);
+                return style.display !== 'none' && 
+                       style.visibility !== 'hidden' && 
+                       style.opacity !== '0';
+            },
+            
+            // 获取元素的所有子元素
+            getChildElements: function(element) {
+                if (!element) return [];
+                return Array.from(element.children);
+            },
+            
+            // 获取元素的所有子节点（包括文本节点）
+            getChildNodes: function(element) {
+                if (!element) return [];
+                return Array.from(element.childNodes);
+            },
+            
+            // 获取元素的父元素
+            getParentElement: function(element) {
+                if (!element) return null;
+                return element.parentElement;
+            },
+            
+            // 获取元素的所有祖先元素
+            getAncestorElements: function(element) {
+                if (!element) return [];
+                const ancestors = [];
+                let current = element.parentElement;
+                while (current) {
+                    ancestors.push(current);
+                    current = current.parentElement;
+                }
+                return ancestors;
+            },
+            
+            // 获取元素的所有兄弟元素
+            getSiblingElements: function(element) {
+                if (!element || !element.parentElement) return [];
+                return Array.from(element.parentElement.children).filter(child => child !== element);
+            },
+            
+            // 检查元素是否包含另一个元素
+            containsElement: function(parent, child) {
+                if (!parent || !child) return false;
+                return parent.contains(child);
+            },
+            
+            // 获取元素的标签名
+            getTagName: function(element) {
+                if (!element) return '';
+                return element.tagName ? element.tagName.toLowerCase() : '';
+            },
+            
+            // 获取元素的节点类型
+            getNodeType: function(element) {
+                if (!element) return null;
+                return element.nodeType;
+            },
+            
+            // 检查元素是否匹配选择器
+            matchesSelector: function(element, selector) {
+                if (!element) return false;
+                return element.matches ? element.matches(selector) : false;
+            },
+            
+            // 获取元素的计算样式值
+            getStyleValue: function(element, property) {
+                if (!element) return '';
+                const style = window.getComputedStyle(element);
+                return style.getPropertyValue(property);
+            },
+            
+            // 设置元素的样式
+            setStyle: function(element, property, value) {
+                if (!element) return;
+                element.style[property] = value;
+            },
+            
+            // 添加类名
+            addClass: function(element, className) {
+                if (!element) return;
+                element.classList.add(className);
+            },
+            
+            // 移除类名
+            removeClass: function(element, className) {
+                if (!element) return;
+                element.classList.remove(className);
+            },
+            
+            // 切换类名
+            toggleClass: function(element, className) {
+                if (!element) return;
+                element.classList.toggle(className);
+            },
+            
+            // 检查是否包含类名
+            hasClass: function(element, className) {
+                if (!element) return false;
+                return element.classList.contains(className);
+            },
+            
+            // 设置属性
+            setAttribute: function(element, name, value) {
+                if (!element) return;
+                element.setAttribute(name, value);
+            },
+            
+            // 获取属性
+            getAttribute: function(element, name) {
+                if (!element) return null;
+                return element.getAttribute(name);
+            },
+            
+            // 移除属性
+            removeAttribute: function(element, name) {
+                if (!element) return;
+                element.removeAttribute(name);
+            },
+            
+            // 检查是否有属性
+            hasAttribute: function(element, name) {
+                if (!element) return false;
+                return element.hasAttribute(name);
+            },
+            
+            // 获取所有属性名
+            getAttributeNames: function(element) {
+                if (!element) return [];
+                return Array.from(element.attributes).map(attr => attr.name);
+            },
+            
+            // 创建新元素
+            createElement: function(tagName, attributes = {}) {
+                const element = document.createElement(tagName);
+                for (const [name, value] of Object.entries(attributes)) {
+                    element.setAttribute(name, value);
+                }
+                return element;
+            },
+            
+            // 创建文本节点
+            createTextNode: function(text) {
+                return document.createTextNode(text);
+            },
+            
+            // 添加事件监听器
+            addEventListener: function(element, type, listener, options) {
+                if (!element) return;
+                element.addEventListener(type, listener, options);
+            },
+            
+            // 移除事件监听器
+            removeEventListener: function(element, type, listener, options) {
+                if (!element) return;
+                element.removeEventListener(type, listener, options);
+            },
+            
+            // 触发事件
+            dispatchEvent: function(element, event) {
+                if (!element) return false;
+                return element.dispatchEvent(event);
+            },
+            
+            // 创建自定义事件
+            createEvent: function(type, options = {}) {
+                return new CustomEvent(type, options);
+            },
+            
+            // 获取元素的焦点状态
+            hasFocus: function(element) {
+                if (!element) return false;
+                return document.activeElement === element;
+            },
+            
+            // 设置元素焦点
+            focus: function(element) {
+                if (!element) return;
+                element.focus();
+            },
+            
+            // 移除元素焦点
+            blur: function(element) {
+                if (!element) return;
+                element.blur();
+            },
+            
+            // 滚动元素到可见区域
+            scrollIntoView: function(element, options) {
+                if (!element) return;
+                element.scrollIntoView(options);
+            },
+            
+            // 获取元素的滚动位置
+            getScrollPosition: function(element) {
+                if (!element) return { x: 0, y: 0 };
+                return {
+                    x: element.scrollLeft,
+                    y: element.scrollTop
+                };
+            },
+            
+            // 设置元素的滚动位置
+            setScrollPosition: function(element, x, y) {
+                if (!element) return;
+                element.scrollLeft = x;
+                element.scrollTop = y;
+            },
+            
+            // 获取元素的尺寸
+            getElementSize: function(element) {
+                if (!element) return { width: 0, height: 0 };
+                const rect = element.getBoundingClientRect();
+                return {
+                    width: rect.width,
+                    height: rect.height
+                };
+            },
+            
+            // 检查元素是否在视口中
+            isInViewport: function(element) {
+                if (!element) return false;
+                const rect = element.getBoundingClientRect();
+                return (
+                    rect.top >= 0 &&
+                    rect.left >= 0 &&
+                    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+                );
+            },
+            
+            // 获取元素相对于视口的位置
+            getElementViewportPosition: function(element) {
+                if (!element) return null;
+                const rect = element.getBoundingClientRect();
+                return {
+                    top: rect.top,
+                    left: rect.left,
+                    bottom: rect.bottom,
+                    right: rect.right
+                };
+            },
+            
+            // 获取元素相对于文档的位置
+            getElementDocumentPosition: function(element) {
+                if (!element) return null;
+                const rect = element.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+                return {
+                    top: rect.top + scrollTop,
+                    left: rect.left + scrollLeft,
+                    bottom: rect.bottom + scrollTop,
+                    right: rect.right + scrollLeft
+                };
+            }
+        };
+        
+        // 添加一些便捷的全局函数
+        window.$ = function(selector) {
+            return document.querySelector(selector);
+        };
+        
+        window.$$ = function(selector) {
+            return Array.from(document.querySelectorAll(selector));
+        };
+        
+        window.$id = function(id) {
+            return document.getElementById(id);
+        };
+        
+        window.$class = function(className) {
+            return Array.from(document.getElementsByClassName(className));
+        };
+        
+        window.$tag = function(tagName) {
+            return Array.from(document.getElementsByTagName(tagName));
+        };
+        
+        window.$attr = function(attributeName, attributeValue) {
+            return window.domUtils.findElementsByAttribute(attributeName, attributeValue);
+        };
+        
+        // 添加调试工具
+        window.debugElement = function(element) {
+            if (!element) {
+                console.log('No element provided');
+                return;
+            }
+            
+            console.log('=== Element Debug Info ===');
+            console.log('Tag:', element.tagName);
+            console.log('ID:', element.id);
+            console.log('Classes:', element.className);
+            console.log('Attributes:', window.domUtils.getAllAttributes(element));
+            console.log('Text Content:', window.domUtils.getTextContent(element));
+            console.log('Inner HTML:', window.domUtils.getInnerHTML(element));
+            console.log('Outer HTML:', window.domUtils.getOuterHTML(element));
+            console.log('Position:', window.domUtils.getElementPosition(element));
+            console.log('Size:', window.domUtils.getElementSize(element));
+            console.log('Visible:', window.domUtils.isElementVisible(element));
+            console.log('In Viewport:', window.domUtils.isInViewport(element));
+            console.log('Has Focus:', window.domUtils.hasFocus(element));
+            console.log('Parent:', element.parentElement);
+            console.log('Children:', window.domUtils.getChildElements(element));
+            console.log('Siblings:', window.domUtils.getSiblingElements(element));
+            console.log('========================');
+        };
+        
+        console.log('✓ 浏览器环境初始化完成，DOM工具已加载');
+        return;
+    }
+    
     // 性能优化：延迟初始化控制台输出
     const shouldLog = process?.env?.NODE_ENV !== 'production';
     if (shouldLog) {
         console.log('=== 浏览器环境补丁主入口已加载 ===');
     }
-    
-    // 智能环境检测和配置 - 性能优化版本
-    const isNode = typeof global !== 'undefined' && typeof process !== 'undefined';
-    const isBrowser = typeof globalThis !== 'undefined' && typeof globalThis.window !== 'undefined';
-    const globalObj = isNode ? global : (isBrowser ? globalThis.window : this);
     
     // 性能优化：缓存常用对象
     const Object_prototype_toString = Object.prototype.toString;

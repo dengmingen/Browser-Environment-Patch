@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOM工具示例</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .demo-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .highlight {
+            background: yellow;
+            padding: 2px;
+        }
+        .hidden {
+            display: none;
+        }
+        .visible {
+            display: block;
+        }
+        #testElement {
+            border: 2px solid #007bff;
+            padding: 10px;
+            margin: 10px 0;
+            background: #e3f2fd;
+        }
+        .test-class {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        .another-class {
+            background: #c8e6c9;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DOM工具示例</h1>
+        <p>这个页面演示了如何使用修改后的 main.js 来获取和操作DOM节点。</p>
+        
+        <!-- 测试元素 -->
+        <div id="testElement" class="test-class another-class" 
+             data-custom="test-value" title="测试元素">
+            <h3>测试元素</h3>
+            <p>这是一个用于测试的DOM元素，包含各种属性和类名。</p>
+            <span class="child-element">子元素1</span>
+            <span class="child-element">子元素2</span>
+        </div>
+        
+        <div id="hiddenElement" class="hidden">
+            这是一个隐藏的元素
+        </div>
+        
+        <div class="demo-section">
+            <h3>基本选择器</h3>
+            <button class="button" onclick="testBasicSelectors()">测试基本选择器</button>
+            <div id="basicResult" class="result"></div>
+        </div>
+        
+        <div class="demo-section">
+            <h3>属性操作</h3>
+            <button class="button" onclick="testAttributes()">测试属性操作</button>
+            <div id="attributeResult" class="result"></div>
+        </div>
+        
+        <div class="demo-section">
+            <h3>类名操作</h3>
+            <button class="button" onclick="testClassOperations()">测试类名操作</button>
+            <div id="classResult" class="result"></div>
+        </div>
+        
+        <div class="demo-section">
+            <h3>样式操作</h3>
+            <button class="button" onclick="testStyleOperations()">测试样式操作</button>
+            <div id="styleResult" class="result"></div>
+        </div>
+        
+        <div class="demo-section">
+            <h3>元素关系</h3>
+            <button class="button" onclick="testElementRelations()">测试元素关系</button>
+            <div id="relationResult" class="result"></div>
+        </div>
+        
+        <div class="demo-section">
+            <h3>元素信息</h3>
+            <button class="button" onclick="testElementInfo()">测试元素信息</button>
+            <div id="infoResult" class="result"></div>
+        </div>
+        
+        <div class="demo-section">
+            <h3>调试工具</h3>
+            <button class="button" onclick="testDebugTools()">测试调试工具</button>
+            <div id="debugResult" class="result"></div>
+        </div>
+        
+        <div class="demo-section">
+            <h3>事件处理</h3>
+            <button class="button" onclick="testEventHandling()">测试事件处理</button>
+            <div id="eventResult" class="result"></div>
+        </div>
+        
+        <div class="demo-section">
+            <h3>动态创建元素</h3>
+            <button class="button" onclick="testElementCreation()">测试元素创建</button>
+            <div id="creationResult" class="result"></div>
+        </div>
+    </div>
+
+    <!-- 引入修改后的main.js -->
+    <script src="main.js"></script>
+    
+    <script>
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，DOM工具已就绪');
+        });
+        
+        // 测试基本选择器
+        function testBasicSelectors() {
+            const result = document.getElementById('basicResult');
+            let output = '';
+            
+            // 测试各种选择器
+            const elementById = $id('testElement');
+            const elementsByClass = $class('test-class');
+            const elementsByTag = $tag('div');
+            const elementBySelector = $('div#testElement');
+            const elementsByAttribute = $attr('data-custom');
+            
+            output += '=== 基本选择器测试 ===\n';
+            output += `通过ID选择: ${elementById ? '成功' : '失败'}\n`;
+            output += `通过类名选择: 找到 ${elementsByClass.length} 个元素\n`;
+            output += `通过标签名选择: 找到 ${elementsByTag.length} 个div元素\n`;
+            output += `通过CSS选择器: ${elementBySelector ? '成功' : '失败'}\n`;
+            output += `通过属性选择: 找到 ${elementsByAttribute.length} 个元素\n`;
+            
+            result.textContent = output;
+        }
+        
+        // 测试属性操作
+        function testAttributes() {
+            const result = document.getElementById('attributeResult');
+            const element = $id('testElement');
+            let output = '';
+            
+            output += '=== 属性操作测试 ===\n';
+            
+            // 获取所有属性
+            const allAttributes = domUtils.getAllAttributes(element);
+            output += `所有属性: ${JSON.stringify(allAttributes, null, 2)}\n`;
+            
+            // 获取特定属性
+            const customAttr = domUtils.getAttribute(element, 'data-custom');
+            output += `data-custom属性: ${customAttr}\n`;
+            
+            // 检查属性存在
+            const hasTitle = domUtils.hasAttribute(element, 'title');
+            output += `是否有title属性: ${hasTitle}\n`;
+            
+            // 获取所有属性名
+            const attrNames = domUtils.getAttributeNames(element);
+            output += `属性名列表: ${attrNames.join(', ')}\n`;
+            
+            // 设置新属性
+            domUtils.setAttribute(element, 'data-test', 'new-value');
+            output += `设置新属性 data-test\n`;
+            
+            // 验证设置
+            const newAttr = domUtils.getAttribute(element, 'data-test');
+            output += `新属性值: ${newAttr}\n`;
+            
+            result.textContent = output;
+        }
+        
+        // 测试类名操作
+        function testClassOperations() {
+            const result = document.getElementById('classResult');
+            const element = $id('testElement');
+            let output = '';
+            
+            output += '=== 类名操作测试 ===\n';
+            
+            // 检查类名
+            const hasTestClass = domUtils.hasClass(element, 'test-class');
+            output += `是否有test-class类: ${hasTestClass}\n`;
+            
+            // 添加新类名
+            domUtils.addClass(element, 'new-class');
+            output += `添加new-class类\n`;
+            
+            // 验证添加
+            const hasNewClass = domUtils.hasClass(element, 'new-class');
+            output += `是否有new-class类: ${hasNewClass}\n`;
+            
+            // 切换类名
+            domUtils.toggleClass(element, 'toggle-class');
+            output += `切换toggle-class类\n`;
+            
+            // 移除类名
+            domUtils.removeClass(element, 'another-class');
+            output += `移除another-class类\n`;
+            
+            // 显示当前类名
+            output += `当前类名: ${element.className}\n`;
+            
+            result.textContent = output;
+        }
+        
+        // 测试样式操作
+        function testStyleOperations() {
+            const result = document.getElementById('styleResult');
+            const element = $id('testElement');
+            let output = '';
+            
+            output += '=== 样式操作测试 ===\n';
+            
+            // 获取计算样式
+            const computedStyles = domUtils.getComputedStyles(element);
+            output += `计算样式数量: ${Object.keys(computedStyles).length}\n`;
+            
+            // 获取特定样式值
+            const backgroundColor = domUtils.getStyleValue(element, 'background-color');
+            output += `背景色: ${backgroundColor}\n`;
+            
+            // 设置样式
+            domUtils.setStyle(element, 'border', '3px solid red');
+            output += `设置边框样式\n`;
+            
+            // 获取元素尺寸
+            const size = domUtils.getElementSize(element);
+            output += `元素尺寸: ${size.width} x ${size.height}\n`;
+            
+            // 获取元素位置
+            const position = domUtils.getElementPosition(element);
+            output += `元素位置: ${JSON.stringify(position, null, 2)}\n`;
+            
+            result.textContent = output;
+        }
+        
+        // 测试元素关系
+        function testElementRelations() {
+            const result = document.getElementById('relationResult');
+            const element = $id('testElement');
+            let output = '';
+            
+            output += '=== 元素关系测试 ===\n';
+            
+            // 获取父元素
+            const parent = domUtils.getParentElement(element);
+            output += `父元素标签: ${parent ? parent.tagName : '无'}\n`;
+            
+            // 获取子元素
+            const children = domUtils.getChildElements(element);
+            output += `子元素数量: ${children.length}\n`;
+            children.forEach((child, index) => {
+                output += `  子元素${index + 1}: ${child.tagName} - ${child.textContent.trim()}\n`;
+            });
+            
+            // 获取兄弟元素
+            const siblings = domUtils.getSiblingElements(element);
+            output += `兄弟元素数量: ${siblings.length}\n`;
+            
+            // 获取祖先元素
+            const ancestors = domUtils.getAncestorElements(element);
+            output += `祖先元素数量: ${ancestors.length}\n`;
+            
+            // 检查包含关系
+            const containsChild = domUtils.containsElement(element, children[0]);
+            output += `是否包含第一个子元素: ${containsChild}\n`;
+            
+            result.textContent = output;
+        }
+        
+        // 测试元素信息
+        function testElementInfo() {
+            const result = document.getElementById('infoResult');
+            const element = $id('testElement');
+            let output = '';
+            
+            output += '=== 元素信息测试 ===\n';
+            
+            // 基本信息
+            const tagName = domUtils.getTagName(element);
+            const nodeType = domUtils.getNodeType(element);
+            output += `标签名: ${tagName}\n`;
+            output += `节点类型: ${nodeType}\n`;
+            
+            // 内容信息
+            const textContent = domUtils.getTextContent(element);
+            const innerHTML = domUtils.getInnerHTML(element);
+            const outerHTML = domUtils.getOuterHTML(element);
+            output += `文本内容长度: ${textContent.length}\n`;
+            output += `内部HTML长度: ${innerHTML.length}\n`;
+            output += `外部HTML长度: ${outerHTML.length}\n`;
+            
+            // 可见性
+            const isVisible = domUtils.isElementVisible(element);
+            const isInViewport = domUtils.isInViewport(element);
+            output += `是否可见: ${isVisible}\n`;
+            output += `是否在视口中: ${isInViewport}\n`;
+            
+            // 焦点状态
+            const hasFocus = domUtils.hasFocus(element);
+            output += `是否有焦点: ${hasFocus}\n`;
+            
+            result.textContent = output;
+        }
+        
+        // 测试调试工具
+        function testDebugTools() {
+            const result = document.getElementById('debugResult');
+            const element = $id('testElement');
+            
+            output += '=== 调试工具测试 ===\n';
+            output += '请查看控制台输出以获取详细的元素信息\n';
+            
+            // 调用调试函数
+            debugElement(element);
+            
+            result.textContent = output;
+        }
+        
+        // 测试事件处理
+        function testEventHandling() {
+            const result = document.getElementById('eventResult');
+            const element = $id('testElement');
+            let output = '';
+            
+            output += '=== 事件处理测试 ===\n';
+            
+            // 创建事件监听器
+            let clickCount = 0;
+            const clickHandler = function(e) {
+                clickCount++;
+                output += `点击事件触发 ${clickCount} 次\n`;
+                result.textContent = output;
+            };
+            
+            // 添加事件监听器
+            domUtils.addEventListener(element, 'click', clickHandler);
+            output += `已添加点击事件监听器\n`;
+            
+            // 创建自定义事件
+            const customEvent = domUtils.createEvent('customEvent', {
+                detail: { message: '这是一个自定义事件' }
+            });
+            
+            // 触发自定义事件
+            domUtils.dispatchEvent(element, customEvent);
+            output += `已触发自定义事件\n`;
+            
+            // 移除事件监听器
+            domUtils.removeEventListener(element, 'click', clickHandler);
+            output += `已移除点击事件监听器\n`;
+            
+            result.textContent = output;
+        }
+        
+        // 测试元素创建
+        function testElementCreation() {
+            const result = document.getElementById('creationResult');
+            let output = '';
+            
+            output += '=== 元素创建测试 ===\n';
+            
+            // 创建新元素
+            const newDiv = domUtils.createElement('div', {
+                id: 'newElement',
+                class: 'created-element',
+                'data-created': 'true'
+            });
+            
+            // 创建文本节点
+            const textNode = domUtils.createTextNode('这是动态创建的元素');
+            
+            // 添加文本到元素
+            newDiv.appendChild(textNode);
+            
+            // 添加到页面
+            document.body.appendChild(newDiv);
+            output += `已创建并添加新元素\n`;
+            
+            // 验证创建
+            const createdElement = $id('newElement');
+            if (createdElement) {
+                output += `新元素ID: ${createdElement.id}\n`;
+                output += `新元素类名: ${createdElement.className}\n`;
+                output += `新元素文本: ${domUtils.getTextContent(createdElement)}\n`;
+            }
+            
+            result.textContent = output;
+        }
+    </script>
+</body>
+</html> 
